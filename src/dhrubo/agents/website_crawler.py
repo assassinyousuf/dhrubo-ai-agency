@@ -30,6 +30,18 @@ _log = get_logger("agents.crawler")
 class _MetaExtractor(HTMLParser):
     """Tiny stdlib parser that collects title/meta/h1/link/word density."""
 
+    # Hostnames we treat as "social presence" for the M8 branding review.
+    _SOCIAL_HOSTS: tuple[str, ...] = (
+        "twitter.com",
+        "x.com",
+        "linkedin.com",
+        "github.com",
+        "facebook.com",
+        "instagram.com",
+        "youtube.com",
+        "tiktok.com",
+    )
+
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.title: str = ""
@@ -39,6 +51,8 @@ class _MetaExtractor(HTMLParser):
         self.metas: dict[str, str] = {}
         self.links: list[dict[str, str]] = []
         self.images: list[dict[str, str]] = []
+        self.favicons: list[dict[str, str]] = []
+        self.social_links: list[dict[str, str]] = []
         self.words: int = 0
         self._in_text: bool = False
 
@@ -53,10 +67,28 @@ class _MetaExtractor(HTMLParser):
             content = a.get("content") or ""
             if name and content:
                 self.metas[name] = content
+        elif tag == "link":
+            rel = (a.get("rel") or "").lower()
+            href = a.get("href", "")
+            # Only favicon-family rels: icon, shortcut icon, apple-touch-icon.
+            if href and any(r in rel.split() for r in ("icon", "shortcut", "apple-touch-icon")):
+                self.favicons.append(
+                    {
+                        "href": href,
+                        "sizes": a.get("sizes", "") or "",
+                        "type": a.get("type", "") or "",
+                        "rel": rel,
+                    }
+                )
         elif tag == "a":
             href = a.get("href", "")
             if href:
                 self.links.append({"href": href, "text": ""})
+                lowered = href.lower()
+                for host in self._SOCIAL_HOSTS:
+                    if host in lowered:
+                        self.social_links.append({"platform": host, "href": href})
+                        break
         elif tag == "img":
             src = a.get("src", "")
             alt = a.get("alt", "")
@@ -96,6 +128,8 @@ class CrawledPage(BaseModel):
     images_without_alt: int = 0
     word_count: int = 0
     render_mode: str = "http"  # "http" | "browser"
+    favicons: list[dict[str, str]] = Field(default_factory=list)
+    social_links: list[dict[str, str]] = Field(default_factory=list)
 
 
 def _extract(html: str) -> dict[str, Any]:
@@ -108,6 +142,8 @@ def _extract(html: str) -> dict[str, Any]:
         "metas": parser.metas,
         "links": parser.links,
         "images": parser.images,
+        "favicons": parser.favicons,
+        "social_links": parser.social_links,
         "word_count": parser.words,
         "images_without_alt": images_without_alt,
     }
@@ -203,6 +239,8 @@ class WebsiteCrawlerAgent(BaseAgent):
             images_without_alt=extracted["images_without_alt"],
             word_count=extracted["word_count"],
             render_mode=render_mode,
+            favicons=extracted["favicons"],
+            social_links=extracted["social_links"],
         )
 
         return AgentResult.ok(

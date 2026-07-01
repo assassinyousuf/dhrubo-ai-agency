@@ -16,6 +16,23 @@ class MessageRole(StrEnum):
     TOOL = "tool"
 
 
+class ImageRef(BaseModel):
+    """A reference to an image attached to a chat message.
+
+    Two equivalent forms are supported:
+    - ``url``  — a public/data URL the model can fetch directly.
+    - ``path`` — a local filesystem path the provider will base64-encode on
+      the way out (see :mod:`dhrubo.tools.image_utils`).
+
+    Exactly one of ``url`` or ``path`` must be set.
+    """
+
+    url: str | None = None
+    path: str | None = None
+    media_type: str | None = None  # "image/png", "image/jpeg", "image/webp"
+    detail: str = "auto"           # OpenAI "low"|"high"|"auto"
+
+
 class LLMMessage(BaseModel):
     """A single chat message."""
 
@@ -23,6 +40,7 @@ class LLMMessage(BaseModel):
     content: str
     name: str | None = None
     tool_call_id: str | None = None
+    images: list[ImageRef] = Field(default_factory=list)
 
 
 class LLMRequest(BaseModel):

@@ -18,6 +18,7 @@ class SeoIssue(BaseModel):
     title: str
     detail: str
     recommendation: str
+    id: str | None = None
 
 
 class SeoReport(BaseModel):

@@ -8,6 +8,9 @@ agents:
   - role: planner
     tools: []
 
+  - role: page_indexer
+    tools: []
+
   - role: website_crawler
     tools:
       - browser
@@ -17,8 +20,7 @@ agents:
       - browser
 
   - role: ui_reviewer
-    tools:
-      - vision_caption
+    tools: []
 
   - role: seo_reviewer
     tools: []
@@ -27,8 +29,32 @@ agents:
     tools:
       - lighthouse
 
+  - role: accessibility_reviewer
+    tools:
+      - axe
+
+  - role: security_reviewer
+    tools:
+      - security
+
+  - role: branding_reviewer
+    tools:
+      - branding
+
   - role: report_writer
     tools: []
 
+  - role: diff_reviewer
+    tools:
+      - diff
+
   - role: qa_reviewer
     tools: []
+
+  - role: exporter
+    tools:
+      - markdown_to_pdf
+
+  - role: publisher
+    tools:
+      - github_comment

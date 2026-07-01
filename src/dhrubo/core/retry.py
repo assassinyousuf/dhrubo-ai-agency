@@ -24,6 +24,13 @@ _log = get_logger("retry")
 
 T = TypeVar("T")
 
+__all__ = [
+    "DEFAULT_RETRY",
+    "RetryConfig",
+    "retry_async",
+    "with_retry",
+]
+
 
 async def retry_async[T](
     op: Callable[[], Awaitable[T]],

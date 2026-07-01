@@ -40,9 +40,17 @@ dependencies = [
 browser = [
     "playwright>=1.45",
 ]
-# Performance audits (Lighthouse)
-performance = [
-    "lighthouse>=6.0",
+# Performance audits (PageSpeed Insights HTTP). The `[performance]` extra
+# is currently a no-op — the LighthouseTool only talks to Google's PSI
+# endpoint over httpx. Reserved for a future local-Lighthouse integration.
+performance = []
+# Accessibility audits (axe-core in a real browser). The `[a11y]` extra
+# re-lists `playwright` so a user can opt-in to a11y alone, without the
+# screenshot pipeline. Install Chromium once via `playwright install
+# chromium` before running axe.
+a11y = [
+    "playwright>=1.45",
+    "axe-playwright-python>=0.1",
 ]
 # PDF generation
 pdf = [

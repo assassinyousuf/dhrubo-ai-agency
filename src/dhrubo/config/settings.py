@@ -7,6 +7,7 @@ keeps us out of the global env namespace.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +28,27 @@ class LLMSettings(BaseModel):
     api_key_env: str = "OPENAI_API_KEY"
 
 
+class ExportSettings(BaseModel):
+    """PDF export options (M6+)."""
+
+    pdf_enabled: bool = True
+    pdf_format: Literal["a4", "letter"] = "a4"
+
+
+class GitHubSettings(BaseModel):
+    """GitHub integration options (M12+).
+
+    ``api_key_env`` and ``repository_env`` store the *names* of
+    the environment variables holding the secret and the default
+    repository. The CLI reads them with ``os.environ.get(...)``.
+    Never put the secret itself in this config.
+    """
+
+    api_key_env: str = "GITHUB_TOKEN"
+    repository_env: str = "GITHUB_REPOSITORY"
+    api_base_url: str = "https://api.github.com"
+
+
 class Settings(BaseSettings):
     """Root runtime configuration."""
 
@@ -43,3 +65,5 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     output: OutputSettings = Field(default_factory=OutputSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
+    export: ExportSettings = Field(default_factory=ExportSettings)
+    github: GitHubSettings = Field(default_factory=GitHubSettings)

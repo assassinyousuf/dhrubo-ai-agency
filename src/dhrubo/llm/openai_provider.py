@@ -116,7 +116,30 @@ class OpenAICompatibleProvider:
 
 def _to_openai_msg(msg: LLMMessage) -> dict[str, Any]:
     """Translate our internal message into the SDK's dict shape."""
-    out: dict[str, Any] = {"role": msg.role.value, "content": msg.content}
+    if msg.images:
+        from dhrubo.tools.image_utils import to_data_url
+
+        parts: list[dict[str, Any]] = []
+        if msg.content:
+            parts.append({"type": "text", "text": msg.content})
+        for ref in msg.images:
+            if ref.url:
+                url = ref.url
+            elif ref.path:
+                url = to_data_url(ref.path)
+            else:
+                raise ProviderError(
+                    "ImageRef has neither url nor path",
+                    context={"ref": ref.model_dump()},
+                )
+            part: dict[str, Any] = {
+                "type": "image_url",
+                "image_url": {"url": url, "detail": ref.detail},
+            }
+            parts.append(part)
+        out: dict[str, Any] = {"role": msg.role.value, "content": parts}
+    else:
+        out = {"role": msg.role.value, "content": msg.content}
     if msg.name:
         out["name"] = msg.name
     if msg.tool_call_id:

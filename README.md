@@ -2,12 +2,20 @@
 
 Enterprise-grade autonomous AI Website Audit Agent platform.
 
-> **Status:** v0.3 — Milestones 1, 2, and 3 complete.
+> **Status:** v0.11 — Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11 complete.
 > - **M1 (Repository Foundation):** Core architecture, config, `BaseAgent`, `Tool` ABCs, asynchronous DAG workflow engine, LLM providers (OpenAI-compatible and mock), and CLI scaffold.
 > - **M2 (LLM & Vertical Slice):** Real crawler, SEO reviewer, report writer, and exporter; pipeline runs end-to-end with LLM integration and JSON-parse retry loops.
 > - **M3 (Browser Subsystem):** `BrowserDriver` interface, `NullDriver`, `PlaywrightDriver` (optional extra), `ScreenshotTool`, and `ScreenshotAgent`. The crawler auto-promotes to Playwright with HTTP fallback. Added exponential backoff retry middleware.
+> - **M4 (UI Reviewer + Vision):** Multimodal `LLMMessage` contract (`ImageRef` + `images`), `image_utils` (stdlib), `UiReviewerAgent` that ingests all three viewport screenshots and emits a structured UI/UX sub-report. Report writer grew a `## UI Review` section.
+> - **M5 (Performance Reviewer):** `LighthouseTool` calling PageSpeed Insights v5 over `httpx` with the `pagespeed_call` retry policy. `PerformanceReviewerAgent` (hybrid: deterministic tool call + LLM editor pass) emits a severity-rated performance sub-report. Skips gracefully with an `info` issue when `PAGESPEED_API_KEY`/`GOOGLE_API_KEY` isn't set. Report writer grew a `## Performance Review` section; methodology blurb bumped to v0.3 (SEO + UI + Performance).
+> - **M6 (PDF Export):** `MarkdownToPdfTool` rendering the final Markdown to `report.pdf` via WeasyPrint + the `markdown` package (both in the `[pdf]` extra). `ExporterAgent` grew into a small hybrid: writes md+json, then calls the PDF tool. Skips gracefully with `pdf_skipped` metadata when WeasyPrint isn't installed. CLI adds `--pdf/--no-pdf` and `--pdf-format {a4,letter}` flags.
+> - **M7 (Accessibility Reviewer):** `AxeTool` driving `axe-playwright-python` against a real headless Chromium (new `[a11y]` extra) emits a structured WCAG 2.0/2.1 violations payload. `AccessibilityReviewerAgent` (hybrid: axe → LLM editor pass) emits a severity-rated a11y sub-report with axe `impact` mapped 1:1 to the framework's severity vocabulary (critical→critical, serious→major, moderate→minor, minor→info). Skips gracefully with an `info` issue pointing at the missing `[a11y]` extra when axe/Playwright aren't importable. Report writer grew a `## Accessibility Review` section with a top-violations table; methodology blurb bumped to v0.4 (SEO + UI + Performance + Accessibility).
+> - **M8 (Security + Branding Reviewers):** `SecurityTool` reusing the existing `WebFetchTool` (httpx GET) parses 8 known security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy, X-Content-Type-Options, COOP, CORP), HTTPS scheme, and `Set-Cookie` flags (Secure/HttpOnly/SameSite) — no new deps. `SecurityReviewerAgent` emits a severity-rated security sub-report (missing CSP → critical, missing HSTS on HTTPS → major, insecure cookies → major). `BrandingTool` reads `page_metadata` (logo, favicons, OG/Twitter image, theme color, social presence) + re-fetches the HTML to extract brand colors from inline `<style>` blocks via regex. `BrandingReviewerAgent` emits a severity-rated branding sub-report (no logo → major, low social presence → minor, title inconsistency → minor). The crawler was extended to surface favicon URLs and social-link presence on `page_metadata`. Report writer grew `## Security Review` and `## Branding Review` sections; methodology blurb bumped to v0.5 (SEO + UI + Performance + Accessibility + Security + Branding).
+> - **M9 (Multi-page Audits):** `PageIndexerAgent` (deterministic — no LLM) resolves a list of URLs into a single canonical `pages: list[Page]` + `seed_domain: str`. The pipeline's DAG is now built dynamically per URL count via `build_website_audit_workflow(urls)` — single-URL (M8 task IDs verbatim, with a `page_indexer` prefix) and multi-URL (per-URL fan-out: `crawl_<i>`, `screenshots_<i>`, `seo_review_<i>`, ..., namespaced `page_<i>_<key>` outputs) shapes both share the same `report` aggregator + `export` task. CLI gained the `--pages <a,b,c>` flag (cap 25, mutually exclusive with `--url`); the run-dir slug now uses `seed_domain`; multi-page runs also write a `pages.json` index. Report writer grew a `## Summary` cross-page table + per-page H3 review sections; methodology blurb bumped to v0.6 (mentions "N pages").
+> - **M10 (Comparison / Diff Runs):** The audit is now history-aware. Every issue carries a stable `id` (`slugify(title) + ":" + sha1(title|detail|severity)[:8]`) for diff identity. `DiffTool` is a pure-function tool that compares two sub-report payloads (single- or multi-page) over `id`-first identity with `(severity, title, detail)` fallback — emitting `added`, `removed`, `severity_changed`, `score_changed`, and a one-line `summary`. `DiffReviewerAgent` (deterministic — no LLM) calls `DiffTool` between `report` and `export` when `--diff-against <run_id>` is set. The exporter now writes a `runs/<ts>_<host>/index.json` row per run and embeds the structured `sub_reports` dict into `data.json` so a diff doesn't have to re-parse Markdown; `diff.json` is written alongside `data.json` when a diff was computed. The report writer grows a `## Diff vs <run_id>` H2 section (grouped per page for multi-page runs). CLI gained `--diff-against TEXT` which resolves the previous run's sub-reports via the per-host index and injects them as `previous_sub_reports` + `diff_against` into the initial inputs.
+> - **M11 (Time-range Diffs + Scheduled Audits):** The audit is now scheduled-audit-aware. New `core/timeparse` module parses both relative (`7d`, `24h`, `1w`) and absolute (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SSZ`) time formats; new `core/run_window` module filters the per-host run index by `[start, end)`. `run-audit` gained `--diff-since TEXT` (mutually exclusive with `--diff-against`) which auto-resolves the earliest run in the window and funnels into the M10 path — turning any cron-driven `run-audit` into a scheduled audit that always shows what changed since the last run. New `@app.command("diff")` subcommand answers ad-hoc history queries (`dhrubo diff --url <host> --since 7d`); prints a per-lens human summary by default or writes `diff_<ts>_<host>.json` with `--json`. The M10 latent bug where the `## Diff vs <run_id>` section never appeared in live pipeline runs is fixed by moving the rendering to the exporter (the only task with both `final_report_md` and `diff_payload` in its inputs at the same time).
 >
-> See `docs/MILESTONE_1.md`, `docs/MILESTONE_2_IMPLEMENTATION.md`, and `docs/MILESTONE_3_IMPLEMENTATION.md` for specific milestone details. The full architecture is described in `dhrubo_architecture.md`.
+> See `docs/MILESTONE_1.md` through `docs/MILESTONE_11_IMPLEMENTATION.md` for specific milestone details. The full architecture is described in `dhrubo_architecture.md`.
 
 ## What This Is
 
@@ -33,8 +41,11 @@ pip install -e .
 # With browser automation support (Playwright)
 pip install -e ".[browser]"
 
-# Everything you might want for local development (Browser, Performance, RAG, Vision)
-pip install -e ".[browser,performance,pdf,anthropic,dev]"
+# With accessibility (axe-core) auditing on top of Playwright
+pip install -e ".[a11y]"
+
+# Everything you might want for local development (Browser, A11y, PDF, RAG, Vision)
+pip install -e ".[browser,a11y,pdf,anthropic,dev]"
 
 # If using browser features, install the Chromium binary
 playwright install chromium
@@ -52,6 +63,20 @@ dhrubo run-audit --url https://example.com/
 
 # Run with a real browser for JavaScript-rendered pages and multi-viewport screenshots
 DHRUBO_USE_REAL_BROWSER=1 dhrubo run-audit --url https://example.com/
+
+# Run a real performance review (requires a PageSpeed API key)
+PAGESPEED_API_KEY=... OPENAI_API_KEY=sk-... dhrubo run-audit --url https://example.com/
+# (GOOGLE_API_KEY is also accepted as the PageSpeed key.)
+
+# Disable PDF export (default is on; PDF generation needs `pip install -e .[pdf]`)
+dhrubo run-audit --no-pdf --url https://example.com/
+
+# Render the PDF at letter size instead of A4
+dhrubo run-audit --pdf-format letter --url https://example.com/
+
+# Enable real axe-core accessibility auditing (needs `pip install -e ".[a11y]"` and `playwright install chromium`)
+dhrubo run-audit --url https://example.com/
+# Without [a11y]: "## Accessibility Review" shows "n/a (Accessibility review skipped)" with one info issue.
 ```
 
 ## Development
@@ -66,7 +91,8 @@ make run-audit # runs against a stub target (no real LLM yet)
 ### Outputs
 
 The audit pipeline produces artifacts under `runs/<timestamp>_<host>/`. For example:
-- `report.md` (Human-readable technical audit, including a **Screenshots** section listing desktop/mobile/tablet captures).
+- `report.md` (Human-readable technical audit, including **Screenshots**, **SEO Review**, **UI Review**, **Performance Review** sections).
+- `report.pdf` (A4 / letter PDF rendering of the markdown; requires `pip install -e .[pdf]`. Skipped gracefully when WeasyPrint isn't installed.)
 - `data.json` (Structured raw data).
 
 ## Repository Layout

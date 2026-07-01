@@ -27,6 +27,7 @@ from pydantic import BaseModel, ValidationError
 
 from dhrubo.agents.base_agent import AgentContext, AgentResult, BaseAgent
 from dhrubo.core.errors import AgentError, AgentHallucinationError
+from dhrubo.core.issue_id import populate_issue_ids
 from dhrubo.core.logger import get_logger
 from dhrubo.llm.interface import LLMMessage, LLMRequest
 
@@ -186,8 +187,12 @@ class LLMAgent(BaseAgent):
 
     def _to_result(self, ctx: AgentContext, validated: BaseModel) -> AgentResult:
         """Default: serialize the validated model as JSON under ``response_key``."""
-        # Concrete subclasses may override to fan out multiple outputs.
-        return AgentResult.ok(self.role, response=validated.model_dump())
+        # Back-fill stable ``id``s on every issue (M10). The LLM never
+        # sees the id schema field — we compute it deterministically
+        # from (severity, title, detail) so diff/runs stay stable
+        # across rewords.
+        payload = populate_issue_ids(validated.model_dump())
+        return AgentResult.ok(self.role, response=payload)
 
 
 __all__ = ["LLMAgent"]

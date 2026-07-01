@@ -24,3 +24,67 @@ browser_navigation:
   max_delay_seconds: 5.0
   backoff_multiplier: 1.5
   jitter: true
+
+# PageSpeed Insights HTTP calls — slower tail latencies, stricter rate limits.
+pagespeed_call:
+  max_attempts: 4
+  initial_delay_seconds: 2.0
+  max_delay_seconds: 30.0
+  backoff_multiplier: 2.0
+  jitter: true
+
+# Markdown → PDF rendering (M6). Cheap, but a transient font-cache race
+# can fire a one-shot failure on cold start; tight retries are enough.
+markdown_to_pdf:
+  max_attempts: 3
+  initial_delay_seconds: 0.5
+  max_delay_seconds: 5.0
+  backoff_multiplier: 1.5
+  jitter: true
+
+# axe-core accessibility scans (M7). Browser cold-start can fire one
+# transient network/playwright failure on the first call; tight retries.
+axe_scan:
+  max_attempts: 3
+  initial_delay_seconds: 1.0
+  max_delay_seconds: 10.0
+  backoff_multiplier: 2.0
+  jitter: true
+
+# HTTP security-header scans (M8). Reuses WebFetchTool; transient
+# connection errors / 5xx are common, so a slightly longer retry budget.
+security_scan:
+  max_attempts: 3
+  initial_delay_seconds: 0.5
+  max_delay_seconds: 5.0
+  backoff_multiplier: 1.5
+  jitter: true
+
+# Brand-identity scans (M8). Reuses WebFetchTool for the inline-CSS
+# fallback when the crawler didn't carry `dom_html` forward. Same
+# budget as security_scan.
+branding_scan:
+  max_attempts: 3
+  initial_delay_seconds: 0.5
+  max_delay_seconds: 5.0
+  backoff_multiplier: 1.5
+  jitter: true
+
+# Diff compute (M10). Pure local function — no I/O, no network.
+# Single attempt: there's nothing to retry. (delays must still be > 0
+# per the RetryConfig gt=0 constraint; 0.001s is effectively zero.)
+diff_compute:
+  max_attempts: 1
+  initial_delay_seconds: 0.001
+  max_delay_seconds: 0.001
+  backoff_multiplier: 1.0
+  jitter: false
+
+# GitHub PR-comment POST (M12). Retries cover transient network errors
+# and 5xx from GitHub; the tool itself rejects 4xx without retry.
+github_post:
+  max_attempts: 3
+  initial_delay_seconds: 1.0
+  max_delay_seconds: 15.0
+  backoff_multiplier: 2.0
+  jitter: true
