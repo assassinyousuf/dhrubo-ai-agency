@@ -1,0 +1,34 @@
+# permissions.yaml — Tool access allow-list per agent role.
+#
+# Failure mode is fail-closed: an agent with no entry has no tool access.
+# Listing an agent explicitly with `tools: []` is equivalent to no access
+# (kept explicit so reviewers can see the intent).
+
+agents:
+  - role: planner
+    tools: []
+
+  - role: website_crawler
+    tools:
+      - browser
+
+  - role: screenshot_agent
+    tools:
+      - browser
+
+  - role: ui_reviewer
+    tools:
+      - vision_caption
+
+  - role: seo_reviewer
+    tools: []
+
+  - role: performance_reviewer
+    tools:
+      - lighthouse
+
+  - role: report_writer
+    tools: []
+
+  - role: qa_reviewer
+    tools: []

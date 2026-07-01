@@ -1,0 +1,26 @@
+# retry_policies.yaml — Exponential backoff per named operation.
+#
+# The keys here are referenced by tools/agents via the retry policy
+# registry; they are NOT magic strings. If you reference an unknown name,
+# the policy resolver should fall back to "default" and log a warning.
+
+default:
+  max_attempts: 3
+  initial_delay_seconds: 1.0
+  max_delay_seconds: 30.0
+  backoff_multiplier: 2.0
+  jitter: true
+
+llm_call:
+  max_attempts: 5
+  initial_delay_seconds: 2.0
+  max_delay_seconds: 60.0
+  backoff_multiplier: 2.0
+  jitter: true
+
+browser_navigation:
+  max_attempts: 3
+  initial_delay_seconds: 0.5
+  max_delay_seconds: 5.0
+  backoff_multiplier: 1.5
+  jitter: true

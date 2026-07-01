@@ -1,0 +1,4 @@
+# logging.yaml — Telemetry & verbosity settings.
+# This file is consulted by setup_logging() at boot.
+level: INFO
+json: true

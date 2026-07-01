@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+.installed.cfg
+*.log
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project artifacts
+output/*
+!output/.gitkeep
+screenshots/*
+!screenshots/.gitkeep
+reports/*
+!reports/.gitkeep
+logs/*
+!logs/.gitkeep
+cache/*
+!cache/.gitkeep
+assets/*
+!assets/.gitkeep
+knowledge/*
+!knowledge/.gitkeep
+extensions/*
+!extensions/.gitkeep
+plugins/*
+!plugins/.gitkeep
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
