@@ -13,6 +13,8 @@ from dhrubo.tools.tool_interface import (
     ToolResult,
     tool_registry,
 )
+from dhrubo.tools.technology_detector_tool import TechnologyDetectorTool
+from dhrubo.tools.sitemap_tool import SitemapTool
 
 __all__ = [
     "Tool",
@@ -21,4 +23,6 @@ __all__ = [
     "ToolRegistry",
     "ToolResult",
     "tool_registry",
+    "TechnologyDetectorTool",
+    "SitemapTool",
 ]

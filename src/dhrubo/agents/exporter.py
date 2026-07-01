@@ -94,6 +94,7 @@ class ExporterAgent(BaseAgent):
         "pdf_enabled",
         # M10 additions.
         "sub_reports",
+        "business_documents",
         "diff_payload",
         "diff_against",
     )
@@ -117,6 +118,7 @@ class ExporterAgent(BaseAgent):
         seed_domain: str | None = ctx.inputs.get("seed_domain")
         pages: list[dict[str, object]] = list(ctx.inputs.get("pages") or [])
         sub_reports: dict[str, Any] = dict(ctx.inputs.get("sub_reports") or {})
+        business_documents: dict[str, Any] = dict(ctx.inputs.get("business_documents") or {})
         diff_payload: dict[str, Any] | None = ctx.inputs.get("diff_payload")
         diff_against: str | None = ctx.inputs.get("diff_against")
 
@@ -169,6 +171,17 @@ class ExporterAgent(BaseAgent):
             "context_metadata": dict(ctx.metadata or {}),
         }
         data_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        # Write business docs if available
+        if business_documents:
+            if "executive_summary" in business_documents:
+                (run_dir / "executive_summary.md").write_text(business_documents["executive_summary"], encoding="utf-8")
+            if "proposal" in business_documents:
+                (run_dir / "proposal.md").write_text(business_documents["proposal"], encoding="utf-8")
+            if "roadmap" in business_documents:
+                (run_dir / "roadmap.md").write_text(business_documents["roadmap"], encoding="utf-8")
+            if "cold_email" in business_documents:
+                (run_dir / "cold_email.txt").write_text(business_documents["cold_email"], encoding="utf-8")
 
         # Multi-page: also write a pages.json index for downstream tooling.
         pages_path: Path | None = None

@@ -91,6 +91,24 @@ _PER_URL_TASKS: tuple[tuple[str, str, tuple[str, ...], tuple[str, ...]], ...] = 
         ("target_url", "page_metadata", "dom_html"),
         ("branding_report",),
     ),
+    (
+        "cro_review",
+        "cro_reviewer",
+        ("page_metadata", "dom_html"),
+        ("cro_report",),
+    ),
+    (
+        "ux_review",
+        "ux_reviewer",
+        ("screenshot_paths", "page_metadata"),
+        ("ux_report",),
+    ),
+    (
+        "business_review",
+        "business_reviewer",
+        ("page_metadata", "dom_html"),
+        ("business_report",),
+    ),
 )
 
 
@@ -189,7 +207,7 @@ def build_website_audit_workflow(
         # / dom_html / target_url, which the crawler produces). The UI + a11y
         # reviewers hang off `screenshots` (they need a browser session
         # and/or screenshot_paths).
-        _screenshots_deps = {"ui_review", "a11y_review"}
+        _screenshots_deps = {"ui_review", "a11y_review", "ux_review"}
         for suffix, role, in_keys, out_keys in _PER_URL_TASKS[2:]:
             upstream = screenshots_id if suffix in _screenshots_deps else crawl_id
             tid = _add(suffix, role, in_keys, out_keys, None, url0, [upstream])
@@ -200,7 +218,7 @@ def build_website_audit_workflow(
         report_deps.extend([crawl_id, screenshots_id])
     else:
         # ---- multi-page: per-URL fan-out ----
-        _screenshots_deps_multi = {"ui_review", "a11y_review"}
+        _screenshots_deps_multi = {"ui_review", "a11y_review", "ux_review"}
         for i, url in enumerate(urls):
             crawl_id = _add(
                 "crawl", "website_crawler", ("target_url",),
@@ -221,6 +239,9 @@ def build_website_audit_workflow(
                     "a11y_review": ("a11y_report",),
                     "security_review": ("security_report",),
                     "branding_review": ("branding_report",),
+                    "cro_review": ("cro_report",),
+                    "ux_review": ("ux_report",),
+                    "business_review": ("business_report",),
                 }[suffix]
                 namespaced_out = tuple(f"page_{i}_{k}" for k in base_out)
                 upstream = screenshots_id if suffix in _screenshots_deps_multi else crawl_id
@@ -238,17 +259,53 @@ def build_website_audit_workflow(
             report_deps.append(screenshots_id)
 
     # ------------------------------------------------------------------
+    # 3.5) qa_review — validates all reports
+    # ------------------------------------------------------------------
+    qa_task = Task(
+        task_id="qa_review",
+        role="qa_reviewer",
+        depends_on=sorted(set(report_deps)),
+        input_keys=tuple(dict.fromkeys(report_input_keys)),
+        output_keys=("qa_report",),
+    )
+    wf.add(qa_task)
+
+    # ------------------------------------------------------------------
     # 4) report — aggregator.
     # ------------------------------------------------------------------
     report_output_keys: tuple[str, ...] = ("final_report_md", "sub_reports")
     report_task = Task(
         task_id="report",
         role="report_writer",
-        depends_on=sorted(set(report_deps)),
-        input_keys=tuple(dict.fromkeys(report_input_keys)),  # de-dup, preserve order
+        depends_on=["qa_review"],
+        input_keys=tuple(dict.fromkeys(report_input_keys + ["qa_report"])),
         output_keys=report_output_keys,
     )
     wf.add(report_task)
+
+    # ------------------------------------------------------------------
+    # 4.5) business_writer — specialized business docs.
+    # ------------------------------------------------------------------
+    biz_task = Task(
+        task_id="business_writer",
+        role="business_writer",
+        depends_on=["report"],
+        input_keys=("sub_reports",),
+        output_keys=("business_documents",),
+    )
+    wf.add(biz_task)
+
+    # ------------------------------------------------------------------
+    # 4.7) dataset_generator — training data pipeline.
+    # ------------------------------------------------------------------
+    dataset_task = Task(
+        task_id="dataset_generator",
+        role="dataset_generator",
+        depends_on=["business_writer"],
+        input_keys=("sub_reports", "business_documents", "target_url"),
+        output_keys=("dataset_stats",),
+    )
+    wf.add(dataset_task)
 
     # ------------------------------------------------------------------
     # 5) diff — M10 aggregator (only when --diff-against is set).
@@ -279,7 +336,7 @@ def build_website_audit_workflow(
     # ------------------------------------------------------------------
     # 6) exporter.
     # ------------------------------------------------------------------
-    export_deps = ["report"]
+    export_deps = ["report", "business_writer"]
     if diff_against:
         export_deps.append("diff")
     export_input_keys: tuple[str, ...] = (
@@ -291,6 +348,7 @@ def build_website_audit_workflow(
         "pdf_format",
         "pdf_enabled",
         "sub_reports",
+        "business_documents",
     )
     if diff_against:
         export_input_keys = (*export_input_keys, "diff_payload", "diff_against")
