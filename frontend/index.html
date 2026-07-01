@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dhrubo AI Agency - Cyber UI</title>
+  <link rel="stylesheet" href="./style.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;600;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar glass-panel">
+      <div class="sidebar-header">
+        <h1 class="logo">DHRUBO<span class="accent">.AI</span></h1>
+      </div>
+      <nav class="sidebar-nav">
+        <button id="nav-new-audit" class="nav-btn active">New Audit</button>
+        <button id="nav-history" class="nav-btn">Audit History</button>
+      </nav>
+      <div class="sidebar-footer">
+        <p class="status"><span class="pulse"></span> System Online</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- View: New Audit -->
+      <section id="view-new-audit" class="view active fade-in">
+        <header class="view-header">
+          <h2>Initialize Audit Sequence</h2>
+          <p class="subtitle">Deploy autonomous reviewer agents to analyze a target URL.</p>
+        </header>
+
+        <form id="audit-form" class="audit-form glass-panel">
+          <div class="form-group">
+            <label for="url-input">Target URL / Host</label>
+            <input type="url" id="url-input" placeholder="https://example.com" required class="cyber-input"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="diff-since">Diff Since (Optional)</label>
+              <input type="text" id="diff-since" placeholder="e.g. 7d, 24h" class="cyber-input"/>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="cyber-checkbox-label">
+                <input type="checkbox" id="pdf-export" checked />
+                <span class="custom-checkbox"></span>
+                Generate PDF
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="cyber-btn" id="run-audit-btn">
+            <span class="btn-text">Execute Scan</span>
+            <span class="btn-glitch"></span>
+          </button>
+        </form>
+        
+        <div id="audit-feedback" class="feedback-box hidden"></div>
+      </section>
+
+      <!-- View: Audit History -->
+      <section id="view-history" class="view hidden fade-in">
+        <header class="view-header">
+          <h2>Audit Archives</h2>
+          <p class="subtitle">Retrieve past run data and diffs.</p>
+          <button id="refresh-history-btn" class="cyber-btn-outline">Refresh Data</button>
+        </header>
+
+        <div id="runs-grid" class="runs-grid">
+          <!-- Populated via JS -->
+        </div>
+      </section>
+
+      <!-- View: Report Detail -->
+      <section id="view-report" class="view hidden fade-in">
+        <header class="view-header report-header">
+          <div>
+            <button id="back-to-history" class="cyber-btn-outline sm">← Back</button>
+            <h2 id="report-title">Report Detail</h2>
+          </div>
+        </header>
+        
+        <div class="report-content glass-panel" id="report-markdown">
+          <!-- Populated via JS -->
+          <div class="loader">Decrypting Data...</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

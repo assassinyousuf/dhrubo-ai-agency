@@ -72,6 +72,12 @@ broker = [
     "redis>=5.0",
 ]
 
+# Web UI backend
+ui = [
+    "fastapi>=0.111.0",
+    "uvicorn>=0.30.0",
+]
+
 dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
