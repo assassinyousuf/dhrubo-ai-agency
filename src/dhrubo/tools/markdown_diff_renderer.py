@@ -28,6 +28,7 @@ Used by:
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 # Lens display order + human-readable titles. Matches the
@@ -101,8 +102,8 @@ def render_diff_comment(
     per_lens_severity = _group_by_lens(severity_changed, None)
 
     has_any = any(
-        per_lens_added[l] or per_lens_removed[l] or per_lens_score[l] or per_lens_severity[l]
-        for l in _LENS_ORDER
+        per_lens_added[lens] or per_lens_removed[lens] or per_lens_score[lens] or per_lens_severity[lens]
+        for lens in _LENS_ORDER
     )
     if has_any:
         lines.append("| Lens | Added | Removed | Score Δ |")
@@ -151,7 +152,7 @@ def _group_by_lens(
     rows: list[dict[str, Any]],
     issue_key: str | None,
 ) -> dict[str, list[dict[str, Any]]]:
-    out: dict[str, list[dict[str, Any]]] = {l: [] for l in _LENS_ORDER}
+    out: dict[str, list[dict[str, Any]]] = {lens: [] for lens in _LENS_ORDER}
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -179,10 +180,8 @@ def _sum_score_delta(rows: list[dict[str, Any]]) -> int:
     total = 0
     for r in rows:
         delta = r.get("delta")
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             total += int(delta or 0)
-        except (TypeError, ValueError):
-            pass
     return total
 
 

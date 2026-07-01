@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
 from dhrubo.agents.base_agent import AgentContext
 from dhrubo.agents.publisher import PublisherAgent
 from dhrubo.tools.github_comment_tool import GitHubCommentTool
@@ -109,7 +108,7 @@ async def test_publisher_loads_diff_from_path(tmp_path: Path) -> None:
     """When ``diff_payload`` is absent, the agent reads ``diff_path`` from disk."""
     diff_path = tmp_path / "diff.json"
     diff_path.write_text(json.dumps(_diff_payload()), encoding="utf-8")
-    agent, stub = _agent()
+    agent, _stub = _agent()
     ctx = AgentContext(
         role=agent.role,
         inputs={
