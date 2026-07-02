@@ -14,6 +14,7 @@ M3 behavior:
 from __future__ import annotations
 
 import os
+import re
 from html.parser import HTMLParser
 from typing import Any, ClassVar
 
@@ -21,11 +22,10 @@ from pydantic import BaseModel, Field
 
 from dhrubo.agents.base_agent import AgentContext, AgentResult, BaseAgent
 from dhrubo.core.logger import get_logger
+from dhrubo.tools.sitemap_tool import SitemapParams, SitemapTool
+from dhrubo.tools.technology_detector_tool import TechDetectorParams, TechnologyDetectorTool
 from dhrubo.tools.tool_interface import ToolContext
 from dhrubo.tools.web_fetch_tool import WebFetchTool
-from dhrubo.tools.technology_detector_tool import TechnologyDetectorTool, TechDetectorParams
-from dhrubo.tools.sitemap_tool import SitemapTool, SitemapParams
-import re
 
 _log = get_logger("agents.crawler")
 
@@ -60,7 +60,7 @@ class _MetaExtractor(HTMLParser):
         self.phone_numbers: set[str] = set()
         self.words: int = 0
         self._in_text: bool = False
-        
+
         self._email_re = re.compile(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)")
         self._phone_re = re.compile(r"(\+?1?\s*\(?-*\d{3}\)?\s*-?\s*\d{3}\s*-?\s*\d{4})")
 
@@ -249,7 +249,7 @@ class WebsiteCrawlerAgent(BaseAgent):
 
         html = page_data["html"]
         extracted = _extract(html)
-        
+
         # 1. Tech detection
         tech_res = await self._tech_tool.run(TechDetectorParams(
             url=page_data["final_url"],
@@ -257,11 +257,11 @@ class WebsiteCrawlerAgent(BaseAgent):
             headers=page_data.get("headers", {})
         ), tool_ctx)
         techs = tech_res.data.get("technologies", []) if tech_res.success else []
-        
+
         # 2. Sitemap fetch
         sitemap_res = await self._sitemap_tool.run(SitemapParams(url=page_data["final_url"]), tool_ctx)
         sitemap_info = sitemap_res.data if sitemap_res.success else {}
-        
+
         page = CrawledPage(
             url=page_data["url"],
             final_url=page_data["final_url"],

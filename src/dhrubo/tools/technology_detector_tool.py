@@ -88,11 +88,11 @@ class TechnologyDetectorTool(Tool[TechDetectorParams]):
 
     async def run(self, params: TechDetectorParams, ctx: ToolContext) -> ToolResult:
         _log.info(f"Detecting technologies for {params.url}")
-        
+
         detected = []
         html_lower = params.html.lower()
         headers_lower = {k.lower(): str(v).lower() for k, v in params.headers.items()}
-        
+
         for tech, sigs in _TECH_SIGNATURES.items():
             found = False
             # Check headers
@@ -102,18 +102,18 @@ class TechnologyDetectorTool(Tool[TechDetectorParams]):
                         detected.append(tech)
                         found = True
                         break
-            
+
             if found:
                 continue
-                
+
             # Check HTML
             for html_regex in sigs.get("html", []):
                 if re.search(html_regex, html_lower, re.IGNORECASE):
                     detected.append(tech)
                     break
-                    
+
         return ToolResult.ok(
-            self.name, 
-            data={"technologies": detected}, 
+            self.name,
+            data={"technologies": detected},
             technologies=detected
         )

@@ -1,16 +1,11 @@
-import asyncio
-import os
 import json
 from pathlib import Path
-from typing import Any
-
-from fastapi import FastAPI, BackgroundTasks, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 
 from dhrubo.commands.cli import run_audit
 from dhrubo.core.logger import get_logger
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 _log = get_logger("api.server")
 
@@ -55,7 +50,7 @@ def run_audit_task(url: str, pdf: bool, diff_since: str | None) -> None:
 async def start_audit(req: AuditRequest, background_tasks: BackgroundTasks):
     if not req.url:
         raise HTTPException(status_code=400, detail="url is required")
-    
+
     background_tasks.add_task(run_audit_task, req.url, req.pdf, req.diff_since)
     return {"message": "Audit started in background", "url": req.url}
 
@@ -65,11 +60,11 @@ async def get_runs():
     runs = []
     if not OUTPUT_DIR.exists():
         return {"runs": runs}
-        
+
     for run_dir in OUTPUT_DIR.iterdir():
         if not run_dir.is_dir():
             continue
-            
+
         index_file = run_dir / "index.json"
         data_file = run_dir / "data.json"
         if data_file.exists():
@@ -80,7 +75,7 @@ async def get_runs():
                 "host": run_dir.name.split("_", 1)[1] if "_" in run_dir.name else run_dir.name,
                 "has_diff": (run_dir / "diff.json").exists()
             })
-    
+
     # Sort descending by run_id (timestamp)
     runs.sort(key=lambda x: x["run_id"], reverse=True)
     return {"runs": runs}
@@ -90,14 +85,14 @@ async def get_run_details(run_id: str):
     run_dir = OUTPUT_DIR / run_id
     if not run_dir.exists():
         raise HTTPException(status_code=404, detail="Run not found")
-        
+
     data_file = run_dir / "data.json"
     if not data_file.exists():
         raise HTTPException(status_code=404, detail="data.json not found")
-        
+
     try:
         data = json.loads(data_file.read_text("utf-8"))
-        
+
         diff_data = None
         diff_file = run_dir / "diff.json"
         if diff_file.exists():
@@ -106,7 +101,7 @@ async def get_run_details(run_id: str):
         proposal = (run_dir / "proposal.md").read_text("utf-8") if (run_dir / "proposal.md").exists() else ""
         roadmap = (run_dir / "roadmap.md").read_text("utf-8") if (run_dir / "roadmap.md").exists() else ""
         cold_email = (run_dir / "cold_email.txt").read_text("utf-8") if (run_dir / "cold_email.txt").exists() else ""
-            
+
         return {
             "run_id": run_id,
             "data": data,

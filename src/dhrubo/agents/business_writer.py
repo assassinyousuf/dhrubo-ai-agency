@@ -20,7 +20,7 @@ class BusinessDocuments(BaseModel):
 
 class BusinessWriterAgent(LLMAgent):
     role: ClassVar[str] = "business_writer"
-    
+
     input_keys: ClassVar[tuple[str, ...]] = ("sub_reports",)
     output_keys: ClassVar[tuple[str, ...]] = ("business_documents",)
     response_model: ClassVar[type[BaseModel]] = BusinessDocuments
@@ -71,6 +71,6 @@ class BusinessWriterAgent(LLMAgent):
             return AgentResult.fail(self.role, error=str(exc))
         if not res.success:
             return res
-        
+
         payload = res.outputs.get("response", {})
         return AgentResult.ok(self.role, business_documents=payload)

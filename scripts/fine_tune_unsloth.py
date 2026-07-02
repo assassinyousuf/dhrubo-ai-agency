@@ -8,16 +8,14 @@ Prerequisites:
     pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes
 """
 
-import os
-import torch
 from pathlib import Path
+
 from datasets import load_dataset
-from trl import SFTTrainer
 from transformers import TrainingArguments
+from trl import SFTTrainer
 
 try:
-    from unsloth import FastLanguageModel
-    from unsloth import is_bfloat16_supported
+    from unsloth import FastLanguageModel, is_bfloat16_supported
 except ImportError:
     print("Unsloth not installed. Please install it to run fine-tuning.")
     print("pip install unsloth")
@@ -26,14 +24,15 @@ except ImportError:
     sys.exit(0)
 
 # Configuration
-DATASET_PATH = "dataset/training_data.jsonl"
+DATASET_PATHS = ["dataset/training_data.jsonl", "dataset/real_training_data.jsonl"]
 MODEL_NAME = "unsloth/llama-3-8b-Instruct-bnb-4bit"
 OUTPUT_DIR = "outputs/dhrubo_slm_v1"
 MAX_SEQ_LENGTH = 8192 # Support long DOM contexts
 
 def main():
-    if not Path(DATASET_PATH).exists():
-        print(f"Dataset not found at {DATASET_PATH}. Please run the audit pipeline first.")
+    existing_paths = [p for p in DATASET_PATHS if Path(p).exists()]
+    if not existing_paths:
+        print(f"No datasets found from {DATASET_PATHS}. Please run the audit pipeline or download script first.")
         return
 
     print("Loading model...")
@@ -43,22 +42,22 @@ def main():
         dtype=None,
         load_in_4bit=True,
     )
-    
+
     # Configure LoRA Adapters
     model = FastLanguageModel.get_peft_model(
         model,
-        r=16, 
+        r=16,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
         lora_alpha=16,
-        lora_dropout=0, 
-        bias="none", 
+        lora_dropout=0,
+        bias="none",
         use_gradient_checkpointing="unsloth",
         random_state=3407,
         use_rslora=False,
         loftq_config=None,
     )
-    
+
     print("Loading dataset...")
     # Map standard OpenAI {"messages": [...]} to the format TRL expects
     def format_chat_template(examples):
@@ -67,12 +66,12 @@ def main():
             text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
             texts.append(text)
         return {"text": texts}
-        
-    dataset = load_dataset("json", data_files=DATASET_PATH, split="train")
+
+    dataset = load_dataset("json", data_files=existing_paths, split="train")
     dataset = dataset.map(format_chat_template, batched=True)
-    
+
     print(f"Loaded {len(dataset)} training examples. Initializing Trainer...")
-    
+
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
@@ -80,7 +79,7 @@ def main():
         dataset_text_field="text",
         max_seq_length=MAX_SEQ_LENGTH,
         dataset_num_proc=2,
-        packing=False, 
+        packing=False,
         args=TrainingArguments(
             per_device_train_batch_size=2,
             gradient_accumulation_steps=4,
@@ -97,14 +96,14 @@ def main():
             output_dir=OUTPUT_DIR,
         ),
     )
-    
+
     print("Starting Training...")
     trainer_stats = trainer.train()
-    
+
     print("Training complete! Saving LoRA adapters...")
     model.save_pretrained(f"{OUTPUT_DIR}/lora_model")
     tokenizer.save_pretrained(f"{OUTPUT_DIR}/lora_model")
-    
+
     # Optional: Save to GGUF for Ollama/llama.cpp
     print("Exporting to GGUF (Q4_K_M)...")
     try:

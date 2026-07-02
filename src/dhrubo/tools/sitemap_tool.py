@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from dhrubo.core.logger import get_logger
 from dhrubo.tools.tool_interface import Tool, ToolContext, ToolParameter, ToolResult
-from dhrubo.tools.web_fetch_tool import WebFetchTool, WebFetchParams
+from dhrubo.tools.web_fetch_tool import WebFetchParams, WebFetchTool
 
 _log = get_logger("tools.sitemap")
 
@@ -32,16 +32,16 @@ class SitemapTool(Tool[SitemapParams]):
     async def run(self, params: SitemapParams, ctx: ToolContext) -> ToolResult:
         parsed = urlparse(params.url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
-        
+
         robots_url = f"{base_url}/robots.txt"
         sitemap_url = f"{base_url}/sitemap.xml"
-        
+
         _log.info(f"Fetching robots.txt for {base_url}")
         fetch_tool = WebFetchTool()
-        
+
         robots_data = {"exists": False, "content": ""}
         sitemap_data = {"exists": False, "discovered_urls": []}
-        
+
         # Fetch robots
         try:
             res = await fetch_tool.run(WebFetchParams(url=robots_url, timeout_seconds=10.0), ctx)
@@ -49,14 +49,14 @@ class SitemapTool(Tool[SitemapParams]):
                 text = res.data["data"]["text"]
                 robots_data["exists"] = True
                 robots_data["content"] = text
-                
+
                 # Check for sitemap directives
                 for line in text.splitlines():
                     if line.lower().startswith("sitemap:"):
                         sitemap_url = line.split(":", 1)[1].strip()
         except Exception as e:
             _log.warning(f"Failed to fetch robots.txt: {e}")
-            
+
         # Fetch sitemap
         try:
             s_res = await fetch_tool.run(WebFetchParams(url=sitemap_url, timeout_seconds=10.0), ctx)
@@ -65,9 +65,9 @@ class SitemapTool(Tool[SitemapParams]):
                 # Just flag it, full XML parsing is too heavy for now
         except Exception as e:
             _log.warning(f"Failed to fetch sitemap: {e}")
-            
+
         return ToolResult.ok(
-            self.name, 
+            self.name,
             data={
                 "robots": robots_data,
                 "sitemap_url": sitemap_url if sitemap_data["exists"] else None,

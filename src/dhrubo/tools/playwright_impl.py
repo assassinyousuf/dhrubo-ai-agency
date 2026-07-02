@@ -8,13 +8,9 @@ Install Chromium once via ``playwright install chromium``.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from playwright.async_api import (
-    Browser,
     BrowserContext,
-    Playwright,
-    async_playwright,
 )
 from playwright.async_api import (
     TimeoutError as PlaywrightTimeoutError,

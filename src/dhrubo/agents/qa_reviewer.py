@@ -25,7 +25,7 @@ class QaReport(BaseModel):
 
 class QaReviewerAgent(LLMAgent):
     role: ClassVar[str] = "qa_reviewer"
-    
+
     # Empty input_keys by default; we intercept in execute or let it be passed in
     input_keys: ClassVar[tuple[str, ...]] = ()
     output_keys: ClassVar[tuple[str, ...]] = ("qa_report",)
@@ -52,7 +52,7 @@ class QaReviewerAgent(LLMAgent):
         for key, value in ctx.inputs.items():
             if key.endswith("_report") and value:
                 reports[key] = value
-                
+
         return {
             "reports_json": json.dumps(reports, ensure_ascii=False)[:15000] # Cap size to avoid window overflow
         }
@@ -67,7 +67,7 @@ class QaReviewerAgent(LLMAgent):
             return AgentResult.fail(self.role, error=str(exc))
         if not res.success:
             return res
-        
+
         payload = res.outputs.get("response", {})
         # If QA failed, we could raise an AgentError to trigger the DAG retry loop.
         # But for M15, we just record the QA report so it can be viewed.

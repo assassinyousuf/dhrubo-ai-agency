@@ -7,7 +7,6 @@ BrowserContexts to avoid memory exhaustion during highly concurrent batch runs.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
 from playwright.async_api import Browser, BrowserContext, Playwright, async_playwright
 
@@ -20,17 +19,17 @@ class BrowserPool:
     """Singleton pool for BrowserContexts."""
 
     _instance: BrowserPool | None = None
-    
+
     def __init__(self, max_size: int = 10, headless: bool = True):
         self._max_size = max_size
         self._headless = headless
-        
+
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
         self._contexts: asyncio.Queue[BrowserContext] = asyncio.Queue(maxsize=max_size)
         self._active = 0
         self._lock = asyncio.Lock()
-        
+
     @classmethod
     def get_instance(cls, max_size: int = 10) -> BrowserPool:
         if cls._instance is None:
@@ -51,7 +50,7 @@ class BrowserPool:
         async with self._lock:
             if self._playwright is None:
                 await self._init_browser()
-                
+
             # If we haven't reached max size and queue is empty, create a new one
             if self._contexts.empty() and self._active < self._max_size:
                 assert self._browser is not None
@@ -69,7 +68,7 @@ class BrowserPool:
             await ctx.clear_cookies()
         except Exception as e:
             _log.warning("browser_pool.release_error", extra={"error": str(e)})
-        
+
         await self._contexts.put(ctx)
 
     async def close_all(self) -> None:
@@ -78,15 +77,15 @@ class BrowserPool:
             while not self._contexts.empty():
                 ctx = self._contexts.get_nowait()
                 await ctx.close()
-            
+
             if self._browser:
                 await self._browser.close()
                 self._browser = None
-                
+
             if self._playwright:
                 await self._playwright.stop()
                 self._playwright = None
-            
+
             self._active = 0
             _log.info("browser_pool.closed")
 
