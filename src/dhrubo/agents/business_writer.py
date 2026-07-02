@@ -26,10 +26,14 @@ class BusinessWriterAgent(LLMAgent):
     response_model: ClassVar[type[BaseModel]] = BusinessDocuments
 
     system_template: ClassVar[str] = (
-        "You are a master digital agency CEO and copywriter. You are reviewing the "
+        "You are a master digital agency CEO and elite technical copywriter. You are reviewing the "
         "raw JSON audit of a target website. Your goal is to write multiple business "
-        "documents based strictly on the flaws found in the audit."
-        "\n\n"
+        "documents based strictly on the flaws found in the audit.\n\n"
+        "**CRITICAL INSTRUCTION: You must be extremely detailed, professional, and thorough.**\n"
+        "- Do NOT write brief, single-sentence summaries.\n"
+        "- Use multi-paragraph explanations, actionable bullet points, specific strategies, and deep insights.\n"
+        "- For the Proposal, structure it like a premium consulting pitch with sections for Executive Summary, Problem Definition, Proposed Solutions, and Expected Outcomes.\n"
+        "- For the Roadmap, provide a detailed 90-day technical plan broken into 30-day sprints with specific tasks.\n\n"
         "Output ONLY a JSON object matching the provided schema. The string fields should "
         "contain formatting (Markdown for proposal/summary/roadmap, plain text for cold email)."
     )
@@ -42,23 +46,18 @@ class BusinessWriterAgent(LLMAgent):
 
     def build_variables(self, ctx: AgentContext) -> dict[str, Any]:
         sub_reports = ctx.inputs.get("sub_reports") or {}
-        # We only pass a heavily stripped version to avoid blowing the context window
+        # Pass the full sub_reports, just trim any massive string blobs if they exist
         stripped = {}
         for k, v in sub_reports.items():
             if isinstance(v, dict):
-                # Only keep score, summary, and high severity issues
-                issues = v.get("issues", [])
-                high_sev = [i for i in issues if i.get("severity") in ("critical", "major")]
-                stripped[k] = {
-                    "score": v.get("score"),
-                    "summary": v.get("summary"),
-                    "critical_issues": high_sev
-                }
+                # Keep everything, but remove massive raw HTML or Base64 screenshots if they accidentally bleed in
+                clean_v = {key: val for key, val in v.items() if key not in ("raw_html", "screenshot_base64", "dom_snapshot")}
+                stripped[k] = clean_v
             else:
                 stripped[k] = v
 
         return {
-            "audit_json": json.dumps(stripped, ensure_ascii=False)[:10000]
+            "audit_json": json.dumps(stripped, ensure_ascii=False)[:30000]
         }
 
     def build_user_prompt(self, ctx: AgentContext) -> str:

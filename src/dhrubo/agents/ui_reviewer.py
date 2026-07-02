@@ -86,8 +86,11 @@ class UiReviewerAgent(LLMAgent):
         "rendered at three viewports (desktop, tablet, mobile). Produce a "
         "structured visual audit. Focus on: layout balance, typographic "
         "hierarchy, alignment, contrast, spacing, viewport responsiveness, "
-        "obvious broken images, and visual regressions. Output ONLY a JSON "
-        "object matching the provided schema; no prose."
+        "obvious broken images, and visual regressions.\n"
+        "**CRITICAL INSTRUCTION: You must provide EXTREMELY DETAILED, comprehensive analyses.**\n"
+        "- For every issue 'detail', write multiple sentences explaining exactly what is visually wrong.\n"
+        "- For every 'recommendation', provide a specific, actionable multi-step solution.\n"
+        "Output ONLY a JSON object matching the provided schema; no prose."
     )
 
     user_template: ClassVar[str] = (
@@ -97,7 +100,7 @@ class UiReviewerAgent(LLMAgent):
         "Number of screenshots attached: {{ viewport_count }}\n"
         "Viewports (in order): {{ viewport_names }}\n\n"
         "Return a JSON object with: score (0-100 or null to indicate the "
-        "reviewer could not produce a numeric grade), summary (one sentence), "
+        "reviewer could not produce a numeric grade), summary (detailed multi-sentence paragraph), "
         "issues (array of {severity, title, detail, recommendation}), and "
         "viewports_seen (array of viewport names you actually reviewed). "
         "Severity values: critical, major, minor, info."

@@ -36,7 +36,10 @@ class SeoReviewerAgent(LLMAgent):
     system_template: ClassVar[str] = (
         "You are a senior technical-SEO reviewer. Given a page's DOM and metadata, "
         "produce a structured SEO audit. Focus on: title tag, meta description, "
-        "headings hierarchy, image alt attributes, word count, and link hygiene. "
+        "headings hierarchy, image alt attributes, word count, and link hygiene.\n"
+        "**CRITICAL INSTRUCTION: You must provide EXTREMELY DETAILED, comprehensive analyses.**\n"
+        "- For every issue 'detail', write multiple sentences explaining the SEO impact.\n"
+        "- For every 'recommendation', provide a specific, actionable multi-step solution.\n"
         "Output ONLY a JSON object matching the provided schema; no prose."
     )
 
@@ -52,7 +55,7 @@ class SeoReviewerAgent(LLMAgent):
         "Word count: {{ word_count }}\n\n"
         "DOM (truncated to first {{ dom_chars }} characters):\n"
         "----\n{{ dom_snippet }}\n----\n\n"
-        "Return a JSON object with: score (0-100), summary (one sentence), "
+        "Return a JSON object with: score (0-100), summary (detailed multi-sentence paragraph), "
         "issues (array of {severity, title, detail, recommendation}). "
         "Severity values: critical, major, minor, info."
     )

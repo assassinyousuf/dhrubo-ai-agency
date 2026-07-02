@@ -34,7 +34,10 @@ class BusinessReviewerAgent(LLMAgent):
     system_template: ClassVar[str] = (
         "You are an elite Business Strategist and Copywriter. "
         "Analyze the provided website data to evaluate the company's value proposition, "
-        "brand positioning, messaging clarity, and competitive differentiation. "
+        "brand positioning, messaging clarity, and competitive differentiation.\n"
+        "**CRITICAL INSTRUCTION: You must provide EXTREMELY DETAILED, comprehensive analyses.**\n"
+        "- For every issue 'detail', write multiple sentences explaining the business impact.\n"
+        "- For every 'recommendation', provide a specific, actionable multi-step solution.\n"
         "Output ONLY a JSON object matching the provided schema; no prose."
     )
 
@@ -45,7 +48,7 @@ class BusinessReviewerAgent(LLMAgent):
         "H1 Headings: {{ h1s }}\n\n"
         "DOM Snapshot (truncated to {{ dom_chars }} chars):\n"
         "----\n{{ dom_snippet }}\n----\n\n"
-        "Return a JSON object with: score (0-100), summary (one sentence), "
+        "Return a JSON object with: score (0-100), summary (detailed multi-sentence paragraph), "
         "issues (array of {severity, title, detail, recommendation}). "
         "Severity values: critical, major, minor, info."
     )

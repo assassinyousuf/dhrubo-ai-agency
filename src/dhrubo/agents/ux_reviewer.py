@@ -36,6 +36,9 @@ class UxReviewerAgent(LLMAgent):
         "You are an elite UX/UI Designer and User Researcher. "
         "Analyze the provided website metadata and screenshot descriptions to evaluate "
         "navigation structure, information architecture, visual hierarchy, and cognitive load. "
+        "**CRITICAL INSTRUCTION: You must provide EXTREMELY DETAILED, comprehensive analyses.**\n"
+        "- For every issue 'detail', write multiple sentences explaining exactly what is wrong and why it hurts the user.\n"
+        "- For every 'recommendation', provide a specific, actionable multi-step solution.\n"
         "Output ONLY a JSON object matching the provided schema; no prose."
     )
 
@@ -45,7 +48,7 @@ class UxReviewerAgent(LLMAgent):
         "Number of links (complexity proxy): {{ links_count }}\n"
         "Images without alt text (accessibility/UX proxy): {{ images_without_alt }}\n"
         "Word count (cognitive load proxy): {{ word_count }}\n\n"
-        "Return a JSON object with: score (0-100), summary (one sentence), "
+        "Return a JSON object with: score (0-100), summary (detailed multi-sentence paragraph), "
         "issues (array of {severity, title, detail, recommendation}). "
         "Severity values: critical, major, minor, info."
     )

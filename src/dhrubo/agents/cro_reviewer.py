@@ -34,7 +34,10 @@ class CroReviewerAgent(LLMAgent):
     system_template: ClassVar[str] = (
         "You are an expert Conversion Rate Optimization (CRO) consultant. "
         "Analyze the provided website data to evaluate CTAs, lead capture forms, "
-        "value proposition visibility, and conversion friction. "
+        "value proposition visibility, and conversion friction.\n"
+        "**CRITICAL INSTRUCTION: You must provide EXTREMELY DETAILED, comprehensive analyses.**\n"
+        "- For every issue 'detail', write multiple sentences explaining why conversions drop.\n"
+        "- For every 'recommendation', provide a specific, actionable multi-step solution.\n"
         "Output ONLY a JSON object matching the provided schema; no prose."
     )
 
@@ -46,7 +49,7 @@ class CroReviewerAgent(LLMAgent):
         "Technologies used: {{ tech }}\n\n"
         "DOM Snapshot (truncated to {{ dom_chars }} chars):\n"
         "----\n{{ dom_snippet }}\n----\n\n"
-        "Return a JSON object with: score (0-100), summary (one sentence), "
+        "Return a JSON object with: score (0-100), summary (detailed multi-sentence paragraph), "
         "issues (array of {severity, title, detail, recommendation}). "
         "Severity values: critical, major, minor, info."
     )

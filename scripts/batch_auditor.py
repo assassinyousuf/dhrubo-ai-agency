@@ -37,11 +37,16 @@ async def process_url(url: str, sem: asyncio.Semaphore, provider, models_cfg) ->
                 metadata={"models": models_cfg.model_dump()}
             )
 
-            if not result.success:
-                return {"url": url, "status": "failed", "error": result.error}
+            if result.status == "failed":
+                # Collect all errors from task_results
+                error_msgs = [f"{tid}: {err}" for tid, err in result.errors.items()]
+                error_str = " | ".join(error_msgs) if error_msgs else "Unknown workflow error"
+                return {"url": url, "status": "failed", "error": error_str}
 
             # The exporter agent returns `export_paths` containing the output locations
-            exports = result.outputs.get("export_paths", {})
+            exports = {}
+            if "export" in result.task_results:
+                exports = result.task_results["export"].outputs.get("export_paths", {})
             run_dir = exports.get("run_dir", "")
 
             return {

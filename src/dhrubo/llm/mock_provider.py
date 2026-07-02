@@ -146,6 +146,38 @@ _FALLBACK_BRANDING = {
 }
 
 
+_FALLBACK_QA = {
+    "passed": True,
+    "hallucinations_detected": False,
+    "issues": []
+}
+
+_FALLBACK_CRO = {
+    "score": 60,
+    "summary": "Mock CRO audit.",
+    "issues": [{"severity": "info", "title": "Mock CRO", "detail": "Mock.", "recommendation": "Mock"}],
+}
+
+_FALLBACK_UX = {
+    "score": 60,
+    "summary": "Mock UX audit.",
+    "issues": [{"severity": "info", "title": "Mock UX", "detail": "Mock.", "recommendation": "Mock"}],
+}
+
+_FALLBACK_BUSINESS = {
+    "score": 60,
+    "summary": "Mock Business audit.",
+    "issues": [{"severity": "info", "title": "Mock Business", "detail": "Mock.", "recommendation": "Mock"}],
+}
+
+_FALLBACK_BIZ_DOCS = {
+    "executive_summary": "Mock Exec Summary.",
+    "proposal": "Mock Proposal.",
+    "roadmap": "Mock Roadmap.",
+    "cold_email": "Mock Cold Email."
+}
+
+
 class MockProvider:
     """Returns predictable completions.
 
@@ -180,7 +212,8 @@ class MockProvider:
                 obj = {"raw": payload}
             content = json.dumps(obj)
         elif request.response_format_json:
-            content = json.dumps(_fallback_for(text))
+            sys_text = next((m.content for m in request.messages if m.role.value == "system"), "")
+            content = json.dumps(_fallback_for(sys_text, text))
         else:
             content = f"{self._prefix}{text}"
 
@@ -212,13 +245,25 @@ def _kw_any(text: str, words: tuple[str, ...]) -> bool:
     return any(_kw(text, w) for w in words)
 
 
-def _fallback_for(user_text: str) -> dict[str, Any]:
+def _fallback_for(sys_text: str, user_text: str) -> dict[str, Any]:
     """Pick a believable JSON shape based on prompt keywords.
-
+    
     Covers the agents we ship today; later agents should set
     ``response_format_json=True`` and the mock will return the matching shape.
     """
-    text = user_text.lower()
+    text = (sys_text + " " + user_text).lower()
+    
+    if _kw_any(text, ("qa", "qa_reviewer", "hallucinations")):
+        return _FALLBACK_QA
+    if _kw_any(text, ("business_writer", "proposal", "roadmap", "cold_email")):
+        return _FALLBACK_BIZ_DOCS
+    if _kw_any(text, ("cro", "cro_reviewer", "conversion")):
+        return _FALLBACK_CRO
+    if _kw_any(text, ("ux", "ux_reviewer", "user experience")):
+        return _FALLBACK_UX
+    if _kw_any(text, ("business", "business_reviewer", "value prop")):
+        return _FALLBACK_BUSINESS
+    
     if _kw_any(text, ("seo", "metadata", "headings")):
         return _FALLBACK_SEO
     if _kw_any(text, ("ui", "layout", "screenshot", "visual")):
