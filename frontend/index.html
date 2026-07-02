@@ -87,8 +87,15 @@
           </div>
         </header>
         
-        <div class="report-content glass-panel" id="report-markdown">
-          <!-- Populated via JS -->
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-tab="technical">Technical Audit</button>
+          <button class="tab-btn" data-tab="executive">Exec Summary</button>
+          <button class="tab-btn" data-tab="proposal">Proposal</button>
+          <button class="tab-btn" data-tab="roadmap">Roadmap</button>
+          <button class="tab-btn" data-tab="email">Cold Email</button>
+        </div>
+
+        <div class="report-content glass-panel" id="report-container">
           <div class="loader">Decrypting Data...</div>
         </div>
       </section>

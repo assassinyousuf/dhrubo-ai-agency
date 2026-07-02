@@ -118,31 +118,66 @@ function formatDate(ts) {
 }
 
 // Open Report Detail
-const reportMarkdown = document.getElementById('report-markdown');
+const reportContainer = document.getElementById('report-container');
 const backToHistory = document.getElementById('back-to-history');
+const tabBtns = document.querySelectorAll('.tab-btn');
+
+let currentReportData = {};
 
 backToHistory.addEventListener('click', () => {
   switchView(viewHistory);
 });
 
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    renderTab(e.target.dataset.tab);
+  });
+});
+
+function renderTab(tabKey) {
+  if (!currentReportData) return;
+  
+  const mapping = {
+    'technical': currentReportData.report_md,
+    'executive': currentReportData.executive_summary_md,
+    'proposal': currentReportData.proposal_md,
+    'roadmap': currentReportData.roadmap_md,
+    'email': currentReportData.cold_email_txt
+  };
+  
+  const content = mapping[tabKey];
+  if (!content) {
+    reportContainer.innerHTML = '<p>No data available for this document.</p>';
+    return;
+  }
+  
+  // Render text for email, markdown for others
+  if (tabKey === 'email') {
+    reportContainer.innerHTML = `<pre style="white-space: pre-wrap; font-family: var(--font-body); color: var(--text-bright);">${content}</pre>`;
+  } else {
+    reportContainer.innerHTML = marked.parse(content);
+  }
+}
+
 async function openReport(runId) {
   switchView(viewReport);
   document.getElementById('report-title').innerText = runId;
-  reportMarkdown.innerHTML = '<div class="loader">Decrypting Data...</div>';
+  reportContainer.innerHTML = '<div class="loader">Decrypting Data...</div>';
+  
+  // Reset to first tab
+  tabBtns.forEach(b => b.classList.remove('active'));
+  tabBtns[0].classList.add('active');
   
   try {
     const res = await fetch(`/api/runs/${runId}`);
     if (!res.ok) throw new Error("Could not fetch report details");
     
-    const data = await res.json();
+    currentReportData = await res.json();
+    renderTab('technical');
     
-    if (data.report_md) {
-      // Use marked.js to render markdown
-      reportMarkdown.innerHTML = marked.parse(data.report_md);
-    } else {
-      reportMarkdown.innerHTML = '<p>No markdown report found for this run.</p>';
-    }
   } catch (err) {
-    reportMarkdown.innerHTML = `<p style="color:#ff3b30">Error loading report: ${err.message}</p>`;
+    reportContainer.innerHTML = `<p style="color:#ff3b30">Error loading report: ${err.message}</p>`;
   }
 }

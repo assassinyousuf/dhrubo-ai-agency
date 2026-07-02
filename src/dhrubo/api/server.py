@@ -102,12 +102,20 @@ async def get_run_details(run_id: str):
         diff_file = run_dir / "diff.json"
         if diff_file.exists():
             diff_data = json.loads(diff_file.read_text("utf-8"))
+        exec_summary = (run_dir / "executive_summary.md").read_text("utf-8") if (run_dir / "executive_summary.md").exists() else ""
+        proposal = (run_dir / "proposal.md").read_text("utf-8") if (run_dir / "proposal.md").exists() else ""
+        roadmap = (run_dir / "roadmap.md").read_text("utf-8") if (run_dir / "roadmap.md").exists() else ""
+        cold_email = (run_dir / "cold_email.txt").read_text("utf-8") if (run_dir / "cold_email.txt").exists() else ""
             
         return {
             "run_id": run_id,
             "data": data,
             "diff": diff_data,
-            "report_md": data.get("report_markdown", "")
+            "report_md": data.get("report_markdown", ""),
+            "executive_summary_md": exec_summary,
+            "proposal_md": proposal,
+            "roadmap_md": roadmap,
+            "cold_email_txt": cold_email
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
