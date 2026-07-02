@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job_id[:8] }} &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>
+    <a href="/" class="muted">Home</a>
+    <span class="sep">/</span>
+    <span>Job {{ job_id[:12] }}…</span>
+    <span class="state state-{{ job.state|state_class }}">{{ job.state.value }}</span>
+  </h2>
+  <div class="meta muted small">
+    <code>{{ ' '.join(argv) }}</code>
+  </div>
+  <div class="actions">
+    <form method="post" action="/jobs/{{ job_id }}/cancel" class="inline">
+      <button type="submit" class="danger" {% if job.state.value not in ('queued', 'running') %}disabled{% endif %}>
+        Cancel
+      </button>
+    </form>
+    <span class="muted small">Log auto-scrolls as new lines arrive.</span>
+  </div>
+</section>
+
+<section class="card">
+  <h3>Log stream</h3>
+  <pre id="log" class="log" data-job-id="{{ job_id }}"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/events.js" defer></script>
+{% endblock %}

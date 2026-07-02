@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ seed_domain }} &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>
+    <a href="/" class="muted">Home</a>
+    <span class="sep">/</span>
+    <span>{{ seed_domain }}</span>
+  </h2>
+  {% if runs %}
+    <p class="muted">{{ runs|length }} run(s) on file.</p>
+    <ul class="timeline">
+      {% for row in runs %}
+        <li class="timeline-item">
+          <div class="ts muted">{{ (row.ts or '')|truncate(19, true, '') }}</div>
+          <div class="body">
+            <a href="/runs/{{ row.run_id }}" class="run-link">
+              {{ (row.target_url or '')|truncate(80, true, '…') }}
+            </a>
+            <div class="meta muted">
+              <span>{{ row.n_pages or '?' }} pages</span>
+              {% if row.overall_score is not none %}
+                <span class="dot">&middot;</span>
+                <span>score {{ row.overall_score }}</span>
+              {% endif %}
+              {% if row.diff_against %}
+                <span class="dot">&middot;</span>
+                <span>diff vs {{ (row.diff_against or '')|truncate(12, true, '…') }}</span>
+              {% endif %}
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No runs found for <code>{{ seed_domain }}</code>.</p>
+  {% endif %}
+</section>
+{% endblock %}

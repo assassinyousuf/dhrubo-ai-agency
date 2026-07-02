@@ -612,6 +612,123 @@ def _human_duration(window: object) -> str:
     return f"{seconds // 86400}d"
 
 
+@app.command("dashboard")
+def dashboard_cmd(
+    host: str | None = typer.Option(
+        None,
+        "--host",
+        help="Bind address (default 127.0.0.1; loopback only).",
+    ),
+    port: int | None = typer.Option(
+        None,
+        "--port",
+        min=1,
+        max=65535,
+        help="TCP port (default 8765).",
+    ),
+    output_dir: Path = typer.Option(
+        None,
+        "--output-dir",
+        "-o",
+        help="Run output directory (default ./output).",
+        file_okay=False,
+    ),
+    config_dir: Path = typer.Option(
+        Path("./config"),
+        "--config",
+        "-c",
+        help="Config directory (default ./config).",
+        exists=False,
+        file_okay=False,
+    ),
+    open_browser: bool = typer.Option(
+        False,
+        "--open/--no-open",
+        help="Open the dashboard URL in the default browser on start.",
+    ),
+    workers: int = typer.Option(
+        1,
+        "--workers",
+        min=1,
+        help="uvicorn workers (default 1; the supervisor is in-process).",
+    ),
+    reload: bool = typer.Option(
+        False,
+        "--reload/--no-reload",
+        help="Auto-reload on Python file changes (dev only).",
+    ),
+) -> None:
+    """Start the local web dashboard (FastAPI + uvicorn).
+
+    Browse run history, trigger new audits, diff two runs, post
+    a diff.json to a PR. Loopback only; no authentication.
+    """
+    settings = build_settings(config_dir=config_dir)
+    _initialize(settings)
+
+    bind_host = host or settings.dashboard.host
+    bind_port = port if port is not None else settings.dashboard.port
+    target_output = output_dir or settings.output.directory
+
+    # Soft import — uvicorn/fastapi live in the [ui] extra. Importing
+    # the dashboard subcommand shouldn't drag them in for users who
+    # only use the audit/diff/publish commands.
+    try:
+        import uvicorn
+    except ImportError as exc:
+        _console.print(
+            "[red]Error:[/red] the dashboard requires the [ui] extra. "
+            "Install with `pip install -e .[ui]`."
+        )
+        raise typer.Exit(code=2) from exc
+
+    target_output.mkdir(parents=True, exist_ok=True)
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    _console.print(
+        f"[bold]Starting local dashboard[/bold] on "
+        f"http://{bind_host}:{bind_port}"
+    )
+    _console.print(f"  Output directory: [cyan]{target_output}[/cyan]")
+    _console.print(f"  Config directory: [cyan]{config_dir}[/cyan]")
+    _console.print(f"  Max concurrent runs: {settings.dashboard.max_concurrent_runs}")
+    _console.print("  Press Ctrl+C to stop.")
+
+    if open_browser:
+        # Defer the import to keep the soft dependency clean.
+        import threading
+        import time
+        import webbrowser
+
+        def _open() -> None:
+            time.sleep(0.6)
+            try:
+                webbrowser.open(f"http://{bind_host}:{bind_port}/")
+            except Exception:  # pragma: no cover - best-effort
+                _log.warning("dashboard.browser_open_failed", exc_info=True)
+
+        threading.Thread(target=_open, daemon=True).start()
+
+    # We use the factory form so the app reads settings from a fresh
+    # Settings() at process start. uvicorn will spawn one (or more)
+    # workers, each with its own supervisor.
+    config = uvicorn.Config(
+        "dhrubo.dashboard.app:create_app",
+        factory=True,
+        host=bind_host,
+        port=bind_port,
+        log_config=None,
+        workers=workers,
+        reload=reload,
+    )
+    server = uvicorn.Server(config)
+
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        _console.print("\n[cyan]Dashboard stopped.[/cyan]")
+
+
 @app.command("publish")
 def publish_cmd(
     diff_path: Path = typer.Option(

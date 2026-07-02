@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run_id[:8] }} &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>
+    <a href="/" class="muted">Home</a>
+    <span class="sep">/</span>
+    <span>Run {{ run_id[:12] }}…</span>
+  </h2>
+  <div class="actions">
+    <a class="btn" href="/runs/{{ run_id }}?format=json">View as JSON</a>
+    {% if diff_path %}
+      <a class="btn" href="/publish?diff_path={{ diff_path|urlencode }}">Publish diff →</a>
+    {% endif %}
+  </div>
+  <p class="muted small">
+    On disk: <code>{{ run_dir }}</code>
+    {% if data_path %} &middot; <a href="/runs/{{ run_id }}?format=json">data.json</a>{% endif %}
+  </p>
+</section>
+
+<section class="card">
+  <article class="markdown report-body">
+    {{ report_html | safe }}
+  </article>
+</section>
+
+<details class="card">
+  <summary>Raw Markdown</summary>
+  <pre class="raw"><code>{{ raw_markdown }}</code></pre>
+</details>
+{% endblock %}

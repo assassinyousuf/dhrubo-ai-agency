@@ -2,7 +2,7 @@
 
 Enterprise-grade autonomous AI Website Audit Agent platform.
 
-> **Status:** v0.12 — Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, and 12 complete.
+> **Status:** v0.13 — Milestones 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, and 13 complete.
 > - **M1 (Repository Foundation):** Core architecture, config, `BaseAgent`, `Tool` ABCs, asynchronous DAG workflow engine, LLM providers (OpenAI-compatible and mock), and CLI scaffold.
 > - **M2 (LLM & Vertical Slice):** Real crawler, SEO reviewer, report writer, and exporter; pipeline runs end-to-end with LLM integration and JSON-parse retry loops.
 > - **M3 (Browser Subsystem):** `BrowserDriver` interface, `NullDriver`, `PlaywrightDriver` (optional extra), `ScreenshotTool`, and `ScreenshotAgent`. The crawler auto-promotes to Playwright with HTTP fallback. Added exponential backoff retry middleware.
@@ -15,8 +15,9 @@ Enterprise-grade autonomous AI Website Audit Agent platform.
 > - **M10 (Comparison / Diff Runs):** The audit is now history-aware. Every issue carries a stable `id` (`slugify(title) + ":" + sha1(title|detail|severity)[:8]`) for diff identity. `DiffTool` is a pure-function tool that compares two sub-report payloads (single- or multi-page) over `id`-first identity with `(severity, title, detail)` fallback — emitting `added`, `removed`, `severity_changed`, `score_changed`, and a one-line `summary`. `DiffReviewerAgent` (deterministic — no LLM) calls `DiffTool` between `report` and `export` when `--diff-against <run_id>` is set. The exporter now writes a `runs/<ts>_<host>/index.json` row per run and embeds the structured `sub_reports` dict into `data.json` so a diff doesn't have to re-parse Markdown; `diff.json` is written alongside `data.json` when a diff was computed. The report writer grows a `## Diff vs <run_id>` H2 section (grouped per page for multi-page runs). CLI gained `--diff-against TEXT` which resolves the previous run's sub-reports via the per-host index and injects them as `previous_sub_reports` + `diff_against` into the initial inputs.
 > - **M11 (Time-range Diffs + Scheduled Audits):** The audit is now scheduled-audit-aware. New `core/timeparse` module parses both relative (`7d`, `24h`, `1w`) and absolute (`YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SSZ`) time formats; new `core/run_window` module filters the per-host run index by `[start, end)`. `run-audit` gained `--diff-since TEXT` (mutually exclusive with `--diff-against`) which auto-resolves the earliest run in the window and funnels into the M10 path — turning any cron-driven `run-audit` into a scheduled audit that always shows what changed since the last run. New `@app.command("diff")` subcommand answers ad-hoc history queries (`dhrubo diff --url <host> --since 7d`); prints a per-lens human summary by default or writes `diff_<ts>_<host>.json` with `--json`. The M10 latent bug where the `## Diff vs <run_id>` section never appeared in live pipeline runs is fixed by moving the rendering to the exporter (the only task with both `final_report_md` and `diff_payload` in its inputs at the same time).
 > - **M12 (CI Integration — GitHub PR Comments):** The audit is now CI-integrated. New `tools/markdown_diff_renderer.py` (`render_diff_comment`) is a pure-function renderer that turns a diff payload into a single Markdown body — H2 header + run-id sub-line + italicized summary + per-lens `+N / -M / Δscore` table + per-lens `<details>` blocks for added/removed issues (capped at 50 per lens via `--max-issues-per-lens`). New `tools/github_comment_tool.py` (`GitHubCommentTool`) wraps a single `httpx.AsyncClient.post` to `https://api.github.com/repos/<owner>/<repo>/issues/<n>/comments` with the new `github_post` retry policy (3 attempts, exponential backoff, retries 5xx + network errors only — 4xx short-circuits immediately). New `agents/publisher.py` (`PublisherAgent`, deterministic) reads a `diff_payload` from `ctx.inputs` (or loads from a `diff_path` on disk), renders, posts, emits `comment_url`. New `commands/cli.py` `@app.command("publish")` subcommand is a thin publisher primitive (no DAG) that resolves `--repo` / `--github-pr` / `GITHUB_TOKEN` from flags + env and prints the comment URL on success. New `config/permissions.yaml` `publisher` role with `github_comment` tool; new `retry_policies.yaml` `github_post` policy. README + docs bumped to v0.12.
+> - **M13 (Local Web Dashboard):** A single-user web UI on `127.0.0.1:8765` for browse + trigger + publish. New `dhrubo.dashboard` package: `RunSupervisor` (asyncio process pool with SSE log streaming + `PoolExhaustedError` cap at `max_concurrent_runs`), `create_app()` FastAPI factory with no module-level globals (so tests can inject `tmp_path`), four routers (`system` for `/healthz`, `runs` for home/host/run-detail/job-log, `diff` for the diff form + JSON, `publish` for the diff-to-GitHub form + JSON). 8 Jinja2 templates + 4 vanilla JS/CSS assets (no build step, no framework). `PublisherAgent` is reused in-process — the token is held in the form body for the request lifetime and discarded immediately, never logged or persisted. `sse-starlette` and `markdown` are added to the existing `[ui]` extra (which had been a stub since the project's earliest scaffold). New `@app.command("dashboard")` soft-imports `uvicorn` (clean error if `[ui]` isn't installed) and supports `--host`, `--port`, `--open`, `--workers`, `--reload`. README + docs bumped to v0.13.
 >
-> See `docs/MILESTONE_1.md` through `docs/MILESTONE_12_IMPLEMENTATION.md` for specific milestone details. The full architecture is described in `dhrubo_architecture.md`.
+> See `docs/MILESTONE_1.md` through `docs/MILESTONE_13_IMPLEMENTATION.md` for specific milestone details. The full architecture is described in `dhrubo_architecture.md`.
 
 ## What This Is
 
@@ -90,6 +91,11 @@ GITHUB_TOKEN=ghp_... dhrubo publish \
   --diff-path output/<ts>_example.com/diff.json \
   --repo octocat/Hello-World --github-pr 42
 # → "Comment posted: https://github.com/octocat/Hello-World/pull/42#issuecomment-<id>"
+
+# M13: launch the local web dashboard (needs `pip install -e ".[ui]"`)
+pip install -e ".[ui]"
+dhrubo dashboard --open
+# → http://127.0.0.1:8765 — browse runs, trigger new audits, post diffs to PRs
 ```
 
 ## Development

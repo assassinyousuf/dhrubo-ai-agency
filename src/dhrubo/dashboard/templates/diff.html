@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Diff &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>Compute diff</h2>
+  <p class="muted small">
+    Earliest vs. latest run for the given URL inside the time window.
+  </p>
+  <form id="diff-form" class="form-grid">
+    <label>
+      <span>Target URL</span>
+      <input type="url" name="url" required placeholder="https://example.com/">
+    </label>
+    <label>
+      <span>Since (ISO timestamp)</span>
+      <input type="text" name="since" placeholder="2026-01-01T00:00:00Z">
+    </label>
+    <label>
+      <span>Until (ISO timestamp)</span>
+      <input type="text" name="until" placeholder="2026-02-01T00:00:00Z">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="primary">Compute</button>
+    </div>
+  </form>
+</section>
+
+<section class="card" id="result-card" hidden>
+  <h3>Result <span id="result-summary" class="muted small"></span></h3>
+  <pre id="result" class="result"></pre>
+</section>
+
+<section class="card" id="error-card" hidden>
+  <h3 class="error">Error</h3>
+  <pre id="error" class="result error-text"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/diff.js" defer></script>
+{% endblock %}

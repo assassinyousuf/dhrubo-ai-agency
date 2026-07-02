@@ -171,13 +171,21 @@ class RunSupervisor:
         return job
 
     async def cancel(self, job_id: str) -> bool:
-        """Send SIGTERM to the job's subprocess. Idempotent."""
+        """Send SIGTERM to the job's subprocess. Idempotent.
+
+        Marks the job's state as ``cancelled`` *before* terminating
+        so the exit classifier can distinguish "user clicked cancel"
+        from "subprocess crashed with rc != 0" — important on
+        Windows where SIGTERM-mapped exit codes are positive.
+        """
         job = self._jobs.get(job_id)
         if job is None:
             return False
         proc = job._proc
         if proc is None or proc.returncode is not None:
             return False
+        # Mark intent so _await_exit doesn't classify as failed.
+        job.state = JobState.cancelled
         try:
             proc.terminate()
         except ProcessLookupError:
@@ -187,7 +195,7 @@ class RunSupervisor:
     async def stream_logs(self, job_id: str) -> AsyncIterator[dict[str, Any]]:
         """Async generator that yields SSE event dicts for a job.
 
-        Each yielded dict has keys ``event`` (``"line"``,
+        Each yielded dict has keys ``event`` (``"stdout"``,
         ``"done"``, ``"failed"``, ``"cancelled"``) and ``data``
         (the line text or final payload). The consumer is
         responsible for translating these into SSE wire
@@ -204,7 +212,7 @@ class RunSupervisor:
             # consumer doesn't miss the early output).
             buffer_idx = 0
             while buffer_idx < len(job.lines):
-                yield {"event": "line", "data": job.lines[buffer_idx]}
+                yield {"event": "stdout", "data": job.lines[buffer_idx]}
                 buffer_idx += 1
 
             # Then wait for new lines / final event.
@@ -219,13 +227,13 @@ class RunSupervisor:
             while not complete.is_set():
                 if len(job.lines) > last_seen:
                     while last_seen < len(job.lines):
-                        yield {"event": "line", "data": job.lines[last_seen]}
+                        yield {"event": "stdout", "data": job.lines[last_seen]}
                         last_seen += 1
                 # Avoid a busy-loop on idle jobs.
                 await asyncio.sleep(0.1)
             # Drain any final buffered lines.
             while last_seen < len(job.lines):
-                yield {"event": "line", "data": job.lines[last_seen]}
+                yield {"event": "stdout", "data": job.lines[last_seen]}
                 last_seen += 1
             # Terminal event.
             if job.state == JobState.cancelled:

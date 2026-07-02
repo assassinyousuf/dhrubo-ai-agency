@@ -583,3 +583,136 @@ def test_cli_publish_surfaces_tool_failure(
     out = (result.stdout or "") + (result.stderr or "")
     assert "404" in out
 
+
+# ---------------------------------------------------------------------------
+# M13 — local web dashboard
+# ---------------------------------------------------------------------------
+
+
+def test_cli_dashboard_help() -> None:
+    """``dhrubo dashboard --help`` exits 0 and lists every flag."""
+    result = runner.invoke(app, ["dashboard", "--help"])
+    assert result.exit_code == 0, result.stdout
+    out = result.stdout
+    for flag in (
+        "--host",
+        "--port",
+        "--output-dir",
+        "--config",
+        "--open",
+        "--workers",
+        "--reload",
+    ):
+        assert flag in out, f"missing {flag} in dashboard --help"
+
+
+def test_cli_dashboard_requires_subprocess_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If uvicorn isn't importable, the subcommand exits 2 with a
+    helpful message (we simulate that by stubbing the import to
+    raise ImportError)."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _fake_import(name, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if name == "uvicorn" or name.startswith("uvicorn."):
+            raise ImportError("simulated missing uvicorn")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _fake_import)
+    result = runner.invoke(app, ["dashboard"])
+    assert result.exit_code == 2
+    out = (result.stdout or "") + (result.stderr or "")
+    assert "ui" in out.lower() or "uvicorn" in out.lower()
+
+
+def test_cli_dashboard_passes_through_host_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``--host`` and ``--port`` flow into the uvicorn config."""
+    captured: dict[str, object] = {}
+
+    class _StubServer:
+        def __init__(self, config: object) -> None:
+            captured["host"] = config.host
+            captured["port"] = config.port
+            captured["factory"] = config.factory
+            captured["app"] = config.app
+
+        def run(self) -> None:
+            captured["ran"] = True
+
+    class _StubConfig:
+        def __init__(self, app, **kwargs: object) -> None:
+            self.app = app
+            self.host = kwargs.get("host")
+            self.port = kwargs.get("port")
+            self.factory = kwargs.get("factory")
+
+    class _StubUvicorn:
+        Config = _StubConfig
+        Server = _StubServer
+
+    import sys
+
+    monkeypatch.setitem(sys.modules, "uvicorn", _StubUvicorn)
+
+    result = runner.invoke(
+        app,
+        [
+            "dashboard",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "9123",
+        ],
+    )
+    # Server.run() returned without error → exit 0.
+    assert result.exit_code == 0, result.stdout
+    assert captured.get("ran") is True
+    assert captured["host"] == "127.0.0.1"
+    assert captured["port"] == 9123
+    assert captured["factory"] is True
+    assert captured["app"] == "dhrubo.dashboard.app:create_app"
+
+
+def test_cli_dashboard_runs_against_default_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no flags, the dashboard uses Settings defaults (loopback
+    8765, max_concurrent_runs from settings) and exits cleanly."""
+    captured: dict[str, object] = {}
+
+    class _StubServer:
+        def __init__(self, config: object) -> None:
+            captured["host"] = config.host
+            captured["port"] = config.port
+            captured["factory"] = config.factory
+            self._config = config
+
+        def run(self) -> None:
+            captured["ran"] = True
+
+    class _StubConfig:
+        def __init__(self, app, **kwargs: object) -> None:
+            self.app = app
+            self.host = kwargs.get("host")
+            self.port = kwargs.get("port")
+            self.factory = kwargs.get("factory")
+
+    class _StubUvicorn:
+        Config = _StubConfig
+        Server = _StubServer
+
+    import sys
+
+    monkeypatch.setitem(sys.modules, "uvicorn", _StubUvicorn)
+
+    result = runner.invoke(app, ["dashboard"])
+    assert result.exit_code == 0, result.stdout
+    assert captured.get("ran") is True
+    assert captured["host"] == "127.0.0.1"  # Settings default
+    assert captured["port"] == 8765  # Settings default
+

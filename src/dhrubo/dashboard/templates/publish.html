@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Publish &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>Post diff to a GitHub PR</h2>
+  <p class="muted small">
+    The token is held in memory for the duration of the request and
+    discarded immediately. Nothing is logged, nothing is persisted.
+    You can also leave the token field blank and set
+    <code>{{ api_key_env }}</code> in the dashboard's environment.
+  </p>
+  <form id="publish-form" class="form-grid">
+    <label>
+      <span>Diff path</span>
+      <input type="text" name="diff_path" id="diff_path" required list="recent-diffs" placeholder="runs/&lt;run_id&gt;/diff.json">
+      <datalist id="recent-diffs">
+        {% for p in recent_diffs %}
+          <option value="{{ p }}"></option>
+        {% endfor %}
+      </datalist>
+    </label>
+    <label>
+      <span>Repository (owner/name)</span>
+      <input type="text" name="repo" required placeholder="acme/site">
+      <small class="muted">Or set <code>{{ repository_env }}</code>.</small>
+    </label>
+    <label>
+      <span>PR number</span>
+      <input type="number" name="pr_number" required min="1" value="1">
+    </label>
+    <label>
+      <span>Max issues per lens</span>
+      <input type="number" name="max_issues_per_lens" min="1" max="200" value="50">
+    </label>
+    <label>
+      <span>GitHub token</span>
+      <input type="password" name="github_token" id="github_token" autocomplete="off" placeholder="ghp_...">
+      <small class="muted">Never persisted. Cleared from memory after the call returns.</small>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="primary">Post comment</button>
+    </div>
+  </form>
+</section>
+
+<section class="card" id="result-card" hidden>
+  <h3>Result</h3>
+  <pre id="result" class="result"></pre>
+</section>
+
+<section class="card" id="error-card" hidden>
+  <h3 class="error">Error</h3>
+  <pre id="error" class="result error-text"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/publish.js" defer></script>
+{% endblock %}

@@ -72,11 +72,14 @@ broker = [
     "redis>=5.0",
 ]
 
-# Web UI backend
+# Web UI backend. We pull `markdown` here too so a user who
+# installs only `[ui]` (and skips `[pdf]`) can still render
+# `report.md` in the browser.
 ui = [
     "fastapi>=0.111.0",
     "uvicorn>=0.30.0",
     "sse-starlette>=2.1",
+    "markdown>=3.6",
 ]
 
 dev = [

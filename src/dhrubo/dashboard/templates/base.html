@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}Dhrubo Dashboard{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a href="/">Dhrubo</a>
+      <span class="muted">/ dashboard</span>
+    </div>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/diff">Diff</a>
+      <a href="/publish">Publish</a>
+      <a href="/healthz" class="muted" target="_blank" rel="noopener">Health</a>
+    </nav>
+  </header>
+
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer muted">
+    <span>Local dashboard &mdash; loopback only</span>
+    <span class="dot">&middot;</span>
+    <span>v0.13.0</span>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

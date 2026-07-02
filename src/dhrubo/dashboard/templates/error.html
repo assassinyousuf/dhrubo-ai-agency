@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2 class="error">{{ status_code }} &mdash; {{ title }}</h2>
+  <p>{{ message }}</p>
+  <p><a href="/">Back to home</a></p>
+</section>
+{% endblock %}

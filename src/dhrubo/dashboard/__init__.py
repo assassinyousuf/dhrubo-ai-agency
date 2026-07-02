@@ -15,4 +15,4 @@ without the extra.
 
 from __future__ import annotations
 
-__all__ = ["create_app", "RunSupervisor"]
+__all__ = ["RunSupervisor", "create_app"]

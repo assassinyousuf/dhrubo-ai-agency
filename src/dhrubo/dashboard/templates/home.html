@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Home &mdash; Dhrubo Dashboard{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>New audit</h2>
+  <form method="post" action="/runs" class="form-grid">
+    <label>
+      <span>Target URL</span>
+      <input type="url" name="url" placeholder="https://example.com/" required>
+    </label>
+    <label>
+      <span>Pages file (optional)</span>
+      <input type="text" name="pages" placeholder="path/to/pages.txt">
+    </label>
+    <label>
+      <span>Concurrency</span>
+      <input type="number" name="concurrency" value="4" min="1" max="16">
+    </label>
+    <label>
+      <span>PDF format</span>
+      <select name="pdf_format">
+        <option value="a4">a4</option>
+        <option value="letter">letter</option>
+      </select>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="pdf" value="1" checked>
+      <span>Generate PDF</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="plan_only" value="1">
+      <span>Plan only</span>
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="dry_run" value="1">
+      <span>Dry run</span>
+    </label>
+    <label>
+      <span>Diff against (run_id)</span>
+      <input type="text" name="diff_against" placeholder="optional">
+    </label>
+    <label>
+      <span>Diff since (ISO timestamp)</span>
+      <input type="text" name="diff_since" placeholder="optional">
+    </label>
+    <label>
+      <span>Diff until (ISO timestamp)</span>
+      <input type="text" name="diff_until" placeholder="optional">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="primary">Start audit</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Running jobs <span class="count">({{ running_jobs|length }})</span></h2>
+  {% if running_jobs %}
+    <ul class="job-list">
+      {% for job in running_jobs %}
+        <li class="job job-{{ job.state|state_class }}">
+          <a href="/jobs/{{ job.id }}">{{ job.id }}</a>
+          <span class="pid muted">pid {{ job.pid or '?' }}</span>
+          <span class="state state-{{ job.state|state_class }}">{{ job.state.value }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No jobs running.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Recent runs <span class="count">({{ total_runs }} total, showing {{ recent_runs|length }})</span></h2>
+  {% if recent_runs %}
+    <table class="runs">
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Host</th>
+          <th>URL</th>
+          <th>Pages</th>
+          <th>Score</th>
+          <th>When</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in recent_runs %}
+          <tr>
+            <td><a href="/runs/{{ row.run_id }}">{{ (row.run_id or '')|truncate(22, true, '…') }}</a></td>
+            <td>{% if row.seed_domain %}<a href="/hosts/{{ row.seed_domain }}">{{ row.seed_domain }}</a>{% else %}&mdash;{% endif %}</td>
+            <td class="url">{{ row.target_url or '' }}</td>
+            <td>{{ row.n_pages or '?' }}</td>
+            <td>{{ row.overall_score if row.overall_score is not none else '—' }}</td>
+            <td class="muted">{{ (row.ts or '')|truncate(19, true, '') }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No runs yet. Output root: <code>{{ output_root }}</code></p>
+  {% endif %}
+</section>
+{% endblock %}
