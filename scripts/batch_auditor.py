@@ -12,15 +12,30 @@ import sys
 
 from dhrubo.core.logger import setup_logging
 from dhrubo.workflows.website_audit_pipeline import build_website_audit_workflow
-from dhrubo.workflows.engine import Engine
+from dhrubo.workflows.engine import WorkflowEngine
 from dhrubo.tools.browser_pool import BrowserPool
+from dhrubo.llm.openai_provider import OpenAICompatibleProvider
+from dhrubo.llm import MockProvider
+from dhrubo.config.loader import load_models_config
+from dhrubo.config.settings import Settings
+import os
 
-async def process_url(url: str, sem: asyncio.Semaphore) -> dict:
+def get_provider():
+    if os.environ.get("OPENAI_API_KEY"):
+        return OpenAICompatibleProvider()
+    return MockProvider()
+
+async def process_url(url: str, sem: asyncio.Semaphore, provider, models_cfg) -> dict:
     async with sem:
         try:
             wf = build_website_audit_workflow(urls=[url])
-            engine = Engine(wf)
-            result = await engine.run({"target_url": url})
+            engine = WorkflowEngine(max_concurrency=4)
+            result = await engine.run(
+                wf,
+                initial_inputs={"target_url": url, "target_urls": [url], "pdf_enabled": False},
+                llm=provider,
+                metadata={"models": models_cfg.model_dump()}
+            )
             
             if not result.success:
                 return {"url": url, "status": "failed", "error": result.error}
@@ -64,12 +79,14 @@ async def main():
     
     # Restrict concurrent DAG executions to 10
     sem = asyncio.Semaphore(10)
+    provider = get_provider()
+    models_cfg = load_models_config(Path(r"d:\website analyzer\dhrubo-ai-agency\config"))
     
     tasks = []
     for lead in leads:
         url = lead.get("Website", "").strip()
         if url.startswith("http"):
-            tasks.append((lead, process_url(url, sem)))
+            tasks.append((lead, process_url(url, sem, provider, models_cfg)))
             
     logger.info(f"Starting async execution of {len(tasks)} workflows...")
     

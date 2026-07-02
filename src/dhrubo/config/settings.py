@@ -49,6 +49,26 @@ class GitHubSettings(BaseModel):
     api_base_url: str = "https://api.github.com"
 
 
+class DashboardSettings(BaseModel):
+    """Local web dashboard options (M13+).
+
+    Controls the FastAPI server started by ``dhrubo dashboard``:
+    bind address, port, and the maximum number of concurrent
+    audit subprocesses the dashboard's :class:`RunSupervisor`
+    is allowed to spawn. Override via the standard env-var
+    convention (``DHRUBO_DASHBOARD__HOST=0.0.0.0`` etc.).
+
+    The dashboard is loopback-only by design (single-user,
+    no auth); the dashboard CLI rejects ``--host 0.0.0.0`` in
+    production-grade callers (see :mod:`dhrubo.commands.cli`).
+    """
+
+    host: str = "127.0.0.1"
+    port: int = 8765
+    max_concurrent_runs: int = Field(default=2, ge=1, le=8)
+    start_browser: bool = False
+
+
 class Settings(BaseSettings):
     """Root runtime configuration."""
 
@@ -67,3 +87,4 @@ class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     export: ExportSettings = Field(default_factory=ExportSettings)
     github: GitHubSettings = Field(default_factory=GitHubSettings)
+    dashboard: DashboardSettings = Field(default_factory=DashboardSettings)
