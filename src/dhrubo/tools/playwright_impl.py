@@ -28,6 +28,7 @@ from dhrubo.tools.browser_driver import (
     Screenshot,
     Viewport,
 )
+from dhrubo.tools.browser_pool import BrowserPool
 
 _log = get_logger("tools.playwright")
 
@@ -63,48 +64,24 @@ class PlaywrightDriver(BrowserDriver):
         self._channel = channel
         self._user_agent = user_agent
         self._proxy = proxy
-        self._playwright: Playwright | None = None
-        self._browser: Browser | None = None
         self._ctx: BrowserContext | None = None
         self._current_url: str | None = None
+        self._pool = BrowserPool.get_instance()
 
     async def start(self) -> None:
-        self._playwright = await async_playwright().start()
-        launch_kwargs: dict[str, Any] = {"headless": self._headless}
-        if self._channel:
-            launch_kwargs["channel"] = self._channel
-        if self._proxy:
-            launch_kwargs["proxy"] = self._proxy
-        self._browser = await self._playwright.chromium.launch(**launch_kwargs)
-
-        context_kwargs: dict[str, Any] = {}
-        if self._user_agent:
-            context_kwargs["user_agent"] = self._user_agent
-        self._ctx = await self._browser.new_context(**context_kwargs)
+        self._ctx = await self._pool.acquire()
         _log.info(
-            "playwright.start",
-            extra={"driver": self.name, "headless": self._headless, "channel": self._channel},
+            "playwright.start (pooled)",
+            extra={"driver": self.name},
         )
 
     async def close(self) -> None:
         try:
             if self._ctx is not None:
-                await self._ctx.close()
-        except Exception:  # pragma: no cover - best-effort shutdown
-            _log.exception("playwright.close_context_failed")
-        try:
-            if self._browser is not None:
-                await self._browser.close()
+                await self._pool.release(self._ctx)
         except Exception:  # pragma: no cover
-            _log.exception("playwright.close_browser_failed")
-        try:
-            if self._playwright is not None:
-                await self._playwright.stop()
-        except Exception:  # pragma: no cover
-            _log.exception("playwright.stop_failed")
+            _log.exception("playwright.release_context_failed")
         self._ctx = None
-        self._browser = None
-        self._playwright = None
 
     def _require_context(self) -> BrowserContext:
         if self._ctx is None:
