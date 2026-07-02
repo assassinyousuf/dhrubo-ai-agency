@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  dhrubo-api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: dhrubo_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+      - ./dataset:/app/dataset
+      # Optional: Mount frontend for live UI development
+      - ./frontend:/app/frontend
+      # Optional: Mount config to inject custom yaml without rebuilding
+      - ./config:/app/config
+    environment:
+      # Inject API Keys here or via a .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DHRUBO_LOG_LEVEL=INFO
+    restart: unless-stopped
+    # Use shm_size to prevent Chromium from crashing on heavy pages
+    shm_size: '2gb'

@@ -34,7 +34,21 @@ These agents collaborate through a standardized asynchronous **Directed Acyclic 
 - **Configurable**: Model routing (picking cheap vs. smart models for specific tasks), retry policies, and permissions live in YAML configurations.
 - **Observable**: Structured JSON logging and tracing interfaces are built in from day one.
 
-## Install
+## Installation
+
+### Method 1: Docker (Recommended)
+The fastest way to deploy the entire Swarm (including the FastAPI server, Cyber-UI frontend, and all Playwright Chromium dependencies) is via Docker.
+
+```bash
+# Set your OpenAI API key in .env or your terminal
+export OPENAI_API_KEY="sk-..."
+
+# Build and start the container
+docker-compose up -d --build
+```
+The Dashboard will be live at `http://localhost:8000`.
+
+### Method 2: Local Install
 
 ```bash
 # Core only (no heavy browser binaries)
